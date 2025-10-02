@@ -1,0 +1,130 @@
+[
+  {
+    "id": "sample_001",
+    "claim": "Barack Obama was the first African American president of the United States.",
+    "evidence": [
+      "Barack Obama served as the 44th President of the United States from 2009 to 2017.",
+      "Barack Obama is of African American heritage.",
+      "No previous U.S. president was of African American descent before Obama."
+    ],
+    "label": "True",
+    "annotation_type": "fact_verification",
+    "hop_count": 1
+  },
+  {
+    "id": "sample_002", 
+    "claim": "Albert Einstein developed the theory of relativity and won the Nobel Prize for it.",
+    "evidence": [
+      "Albert Einstein developed the special theory of relativity in 1905 and general theory of relativity in 1915.",
+      "Einstein won the Nobel Prize in Physics in 1921.",
+      "Einstein's Nobel Prize was awarded for his explanation of the photoelectric effect, not for relativity theory."
+    ],
+    "label": "False",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_003",
+    "claim": "The founder of Microsoft, Bill Gates, dropped out of Harvard University.",
+    "evidence": [
+      "Bill Gates co-founded Microsoft in 1975.",
+      "Bill Gates attended Harvard University from 1973 to 1975.",
+      "Gates left Harvard during his sophomore year to focus on Microsoft.",
+      "Harvard University is located in Cambridge, Massachusetts."
+    ],
+    "label": "True", 
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_004",
+    "claim": "The Statue of Liberty was a gift from France and stands on Liberty Island in New York Harbor.",
+    "evidence": [
+      "The Statue of Liberty was dedicated on October 28, 1886.",
+      "The statue was designed by French sculptor Frédéric Auguste Bartholdi.",
+      "France presented the statue to the United States as a gift for the centennial of American independence.",
+      "Liberty Island is located in New York Harbor between Manhattan and Staten Island."
+    ],
+    "label": "True",
+    "annotation_type": "fact_verification", 
+    "hop_count": 2
+  },
+  {
+    "id": "sample_005",
+    "claim": "Shakespeare wrote Romeo and Juliet in the 16th century and it is set in London.",
+    "evidence": [
+      "William Shakespeare wrote Romeo and Juliet around 1594-1596.",
+      "The 16th century spans from 1501 to 1600.",
+      "Romeo and Juliet is set in Verona, Italy, not London.",
+      "Shakespeare was born in Stratford-upon-Avon, England."
+    ],
+    "label": "False",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_006",
+    "claim": "The Great Wall of China was built by Emperor Qin Shi Huang and is visible from space.",
+    "evidence": [
+      "Emperor Qin Shi Huang ordered the construction of the Great Wall around 220-210 BC.",
+      "The Great Wall was built by connecting and extending existing walls built by warring states.",
+      "NASA has confirmed that the Great Wall of China is not visible from space with the naked eye.",
+      "The wall is approximately 13,000 miles long."
+    ],
+    "label": "False",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_007", 
+    "claim": "Marie Curie was the first woman to win a Nobel Prize and she won it in Chemistry.",
+    "evidence": [
+      "Marie Curie won the Nobel Prize in Physics in 1903, shared with Pierre Curie and Henri Becquerel.",
+      "Marie Curie won a second Nobel Prize in Chemistry in 1911.",
+      "Marie Curie was indeed the first woman to win a Nobel Prize.",
+      "She remains the only person to win Nobel Prizes in two different scientific fields."
+    ],
+    "label": "False",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_008",
+    "claim": "The capital of Australia is Sydney and it is the largest city in the country.",
+    "evidence": [
+      "The capital of Australia is Canberra, not Sydney.",
+      "Canberra was established as the capital in 1913.",
+      "Sydney is the largest city in Australia by population.",
+      "Sydney is located in New South Wales and is a major economic center."
+    ],
+    "label": "False",
+    "annotation_type": "fact_verification",
+    "hop_count": 1
+  },
+  {
+    "id": "sample_009",
+    "claim": "Amazon rainforest is located in South America and is often called the lungs of the Earth.",
+    "evidence": [
+      "The Amazon rainforest spans across nine countries in South America.",
+      "Brazil contains about 60% of the Amazon rainforest.",
+      "The Amazon produces about 20% of the world's oxygen.",
+      "It is often referred to as the 'lungs of the Earth' due to its role in oxygen production."
+    ],
+    "label": "True",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  },
+  {
+    "id": "sample_010",
+    "claim": "The iPhone was first released by Apple in 2007 and Steve Jobs was the CEO at that time.",
+    "evidence": [
+      "The first iPhone was announced by Apple on January 9, 2007.",
+      "The iPhone went on sale to the public on June 29, 2007.",
+      "Steve Jobs was the CEO of Apple from 1997 until his resignation in August 2011.",
+      "Steve Jobs personally unveiled the iPhone at the Macworld Conference & Expo."
+    ],
+    "label": "True",
+    "annotation_type": "fact_verification",
+    "hop_count": 2
+  }
+]

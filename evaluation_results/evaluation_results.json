@@ -1,0 +1,117 @@
+{
+  "Random": {
+    "accuracy": 0.4457831325301205,
+    "precision_macro": 0.47081855791962174,
+    "recall_macro": 0.4663256606990622,
+    "f1_macro": 0.436769315876821,
+    "per_class_precision": {
+      "SUPPORTS": 0.28191489361702127,
+      "REFUTES": 0.6597222222222222
+    },
+    "per_class_recall": {
+      "SUPPORTS": 0.5196078431372549,
+      "REFUTES": 0.41304347826086957
+    },
+    "per_class_f1": {
+      "SUPPORTS": 0.36551724137931035,
+      "REFUTES": 0.5080213903743316
+    },
+    "confusion_matrix": {
+      "SUPPORTS": {
+        "SUPPORTS": 53,
+        "REFUTES": 49
+      },
+      "REFUTES": {
+        "SUPPORTS": 135,
+        "REFUTES": 95
+      }
+    },
+    "runtime": 0.002455472946166992,
+    "method": "Random"
+  },
+  "Keyword": {
+    "accuracy": 0.009036144578313253,
+    "precision_macro": 0.4444444444444444,
+    "recall_macro": 0.006166524580846831,
+    "f1_macro": 0.012122209423509408,
+    "per_class_precision": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 1.0,
+      "REFUTES": 0.3333333333333333
+    },
+    "per_class_recall": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 0.00980392156862745,
+      "REFUTES": 0.008695652173913044
+    },
+    "per_class_f1": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 0.01941747572815534,
+      "REFUTES": 0.01694915254237288
+    },
+    "confusion_matrix": {
+      "NOT ENOUGH INFO": {
+        "NOT ENOUGH INFO": 0,
+        "SUPPORTS": 0,
+        "REFUTES": 0
+      },
+      "SUPPORTS": {
+        "NOT ENOUGH INFO": 97,
+        "SUPPORTS": 1,
+        "REFUTES": 4
+      },
+      "REFUTES": {
+        "NOT ENOUGH INFO": 228,
+        "SUPPORTS": 0,
+        "REFUTES": 2
+      }
+    },
+    "runtime": 0.0011899471282958984,
+    "method": "Keyword"
+  },
+  "Simple": {
+    "accuracy": 0.4036144578313253,
+    "precision_macro": 0.29915928770265926,
+    "recall_macro": 0.27604433077578855,
+    "f1_macro": 0.27062922920334326,
+    "per_class_precision": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 0.26627218934911245,
+      "REFUTES": 0.6312056737588653
+    },
+    "per_class_recall": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 0.4411764705882353,
+      "REFUTES": 0.3869565217391304
+    },
+    "per_class_f1": {
+      "NOT ENOUGH INFO": 0.0,
+      "SUPPORTS": 0.33210332103321033,
+      "REFUTES": 0.4797843665768194
+    },
+    "confusion_matrix": {
+      "NOT ENOUGH INFO": {
+        "NOT ENOUGH INFO": 0,
+        "SUPPORTS": 0,
+        "REFUTES": 0
+      },
+      "SUPPORTS": {
+        "NOT ENOUGH INFO": 5,
+        "SUPPORTS": 45,
+        "REFUTES": 52
+      },
+      "REFUTES": {
+        "NOT ENOUGH INFO": 17,
+        "SUPPORTS": 124,
+        "REFUTES": 89
+      }
+    },
+    "runtime": 0.0011823177337646484,
+    "method": "Simple"
+  },
+  "GraphFC": {
+    "method": "GraphFC",
+    "accuracy": 0.0,
+    "error": "Not available"
+  }
+}

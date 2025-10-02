@@ -1,0 +1,8 @@
+{
+  "datasets": {
+    "train": 1545,
+    "validation": 331,
+    "test": 332
+  },
+  "total_samples": 2208
+}

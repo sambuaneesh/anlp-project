@@ -1,0 +1,382 @@
+{
+  "GraphFC": {
+    "model_name": "GraphFC",
+    "accuracy": 0.6,
+    "macro_f1": 0.6,
+    "precision": 0.6,
+    "recall": 0.6,
+    "f1": 0.6,
+    "avg_confidence": 0.6900000000000001,
+    "total_examples": 10,
+    "successful_examples": 10,
+    "error_count": 0,
+    "predictions": [
+      {
+        "id": "sample_001",
+        "predicted_label": "False",
+        "confidence": 0.5,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_002",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_003",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_004",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_005",
+        "predicted_label": "False",
+        "confidence": 0.5,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_006",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_007",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 5
+      },
+      {
+        "id": "sample_008",
+        "predicted_label": "False",
+        "confidence": 0.45,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_009",
+        "predicted_label": "False",
+        "confidence": 0.5,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_010",
+        "predicted_label": "True",
+        "confidence": 0.95,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      }
+    ],
+    "processing_time": 52.77899718284607
+  },
+  "GraphFC-EarlyStop": {
+    "model_name": "GraphFC-EarlyStop",
+    "accuracy": 0.6,
+    "macro_f1": 0.6,
+    "precision": 0.6,
+    "recall": 0.6,
+    "f1": 0.6,
+    "avg_confidence": 0.495,
+    "total_examples": 10,
+    "successful_examples": 10,
+    "error_count": 0,
+    "predictions": [
+      {
+        "id": "sample_001",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_002",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_003",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_004",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_005",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_006",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_007",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 5
+      },
+      {
+        "id": "sample_008",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "False",
+        "claim_triplets": 2,
+        "evidence_triplets": 2
+      },
+      {
+        "id": "sample_009",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      },
+      {
+        "id": "sample_010",
+        "predicted_label": "True",
+        "confidence": 0.95,
+        "true_label": "True",
+        "claim_triplets": 2,
+        "evidence_triplets": 3
+      }
+    ],
+    "processing_time": 46.53266930580139
+  },
+  "Direct": {
+    "model_name": "Direct",
+    "accuracy": 1.0,
+    "macro_f1": 1.0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "avg_confidence": 0.8,
+    "total_examples": 10,
+    "successful_examples": 10,
+    "error_count": 0,
+    "predictions": [
+      {
+        "id": "sample_001",
+        "predicted_label": "True",
+        "confidence": 0.8,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_002",
+        "predicted_label": "False",
+        "confidence": 0.8,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_003",
+        "predicted_label": "True",
+        "confidence": 0.8,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_004",
+        "predicted_label": "True",
+        "confidence": 0.8,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_005",
+        "predicted_label": "False",
+        "confidence": 0.8,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_006",
+        "predicted_label": "False",
+        "confidence": 0.8,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_007",
+        "predicted_label": "False",
+        "confidence": 0.8,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_008",
+        "predicted_label": "False",
+        "confidence": 0.8,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_009",
+        "predicted_label": "True",
+        "confidence": 0.8,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_010",
+        "predicted_label": "True",
+        "confidence": 0.8,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      }
+    ],
+    "processing_time": 7.5952229499816895
+  },
+  "Decomposition": {
+    "model_name": "Decomposition",
+    "accuracy": 0.9,
+    "macro_f1": 0.898989898989899,
+    "precision": 0.9166666666666667,
+    "recall": 0.9,
+    "f1": 0.898989898989899,
+    "avg_confidence": 0.7666666666666666,
+    "total_examples": 10,
+    "successful_examples": 10,
+    "error_count": 0,
+    "predictions": [
+      {
+        "id": "sample_001",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_002",
+        "predicted_label": "False",
+        "confidence": 0.5,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_003",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_004",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_005",
+        "predicted_label": "False",
+        "confidence": 0.6666666666666666,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_006",
+        "predicted_label": "False",
+        "confidence": 0.5,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_007",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_008",
+        "predicted_label": "False",
+        "confidence": 0.0,
+        "true_label": "False",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_009",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      },
+      {
+        "id": "sample_010",
+        "predicted_label": "True",
+        "confidence": 1.0,
+        "true_label": "True",
+        "claim_triplets": 0,
+        "evidence_triplets": 0
+      }
+    ],
+    "processing_time": 23.18200397491455
+  }
+}

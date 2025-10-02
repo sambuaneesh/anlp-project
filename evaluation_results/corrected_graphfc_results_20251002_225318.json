@@ -1,0 +1,79 @@
+{
+  "2_hop": {
+    "accuracy": 0.788135593220339,
+    "precision": 0.6038857242501744,
+    "recall": 0.5314710663291025,
+    "f1": 0.5637055797136076,
+    "support_f1": 0.823529411764706,
+    "refute_f1": 0.867587327376117,
+    "nei_f1": 0,
+    "avg_confidence": 0.6350937377154939,
+    "class_distribution": {
+      "REFUTES": 687,
+      "SUPPORTS": 257
+    },
+    "runtime": 70.74879487138611,
+    "sample_count": 944,
+    "avg_runtime": 0.0749457572790107
+  },
+  "3_hop": {
+    "accuracy": 0.7114485981308412,
+    "precision": 0.5733854113132559,
+    "recall": 0.46761789321789315,
+    "f1": 0.5141552511415525,
+    "support_f1": 0.7168949771689497,
+    "refute_f1": 0.8255707762557077,
+    "nei_f1": 0,
+    "avg_confidence": 0.5725508820957728,
+    "class_distribution": {
+      "SUPPORTS": 231,
+      "REFUTES": 625
+    },
+    "runtime": 90.06428575206678,
+    "sample_count": 856,
+    "avg_runtime": 0.10521528709353596
+  },
+  "4_hop": {
+    "accuracy": 0.3382352941176471,
+    "precision": 0.44693272083452956,
+    "recall": 0.24533333333333332,
+    "f1": 0.30233937212052314,
+    "support_f1": 0.35649546827794565,
+    "refute_f1": 0.5505226480836237,
+    "nei_f1": 0,
+    "avg_confidence": 0.27578773072112417,
+    "class_distribution": {
+      "SUPPORTS": 250,
+      "REFUTES": 158
+    },
+    "runtime": 54.82846224158942,
+    "sample_count": 408,
+    "avg_runtime": 0.13438348588624857
+  },
+  "complete": {
+    "accuracy": 0.6752717391304348,
+    "precision": 0.5730630713674654,
+    "recall": 0.43390852275869696,
+    "f1": 0.4937668067912078,
+    "support_f1": 0.6661454261141516,
+    "refute_f1": 0.8151549942594719,
+    "nei_f1": 0,
+    "avg_confidence": 0.5444535496429468,
+    "class_distribution": {
+      "REFUTES": 1470,
+      "SUPPORTS": 738
+    },
+    "runtime": 215.64154286504234,
+    "sample_count": 2208,
+    "avg_runtime": 0.0976637422396025
+  },
+  "hop_distribution": {
+    "2": 944,
+    "4": 408,
+    "3": 856
+  },
+  "total_samples": 2208,
+  "total_runtime": 215.64154286504234,
+  "accuracy_degradation_2_to_3": 0.07668699508949783,
+  "accuracy_degradation_3_to_4": 0.3732133040131941
+}

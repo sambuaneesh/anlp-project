@@ -1,0 +1,15 @@
+{
+  "total_entries": 2208,
+  "phd_entries": 300,
+  "wikibio_entries": 1908,
+  "splits": {
+    "train": 1545,
+    "validation": 331,
+    "test": 332
+  },
+  "label_distribution": {
+    "SUPPORTS": 738,
+    "REFUTES": 1470,
+    "NOT ENOUGH INFO": 0
+  }
+}

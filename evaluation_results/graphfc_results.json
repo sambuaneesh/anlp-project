@@ -1,0 +1,23 @@
+{
+  "accuracy": 0.7951807228915663,
+  "precision_macro": 0.5537099075625039,
+  "recall_macro": 0.5262858766695083,
+  "f1_macro": 0.5382839382839383,
+  "per_class_precision": {
+    "SUPPORTS": 0.7314814814814815,
+    "REFUTES": 0.9296482412060302,
+    "NOT ENOUGH INFO": 0.0
+  },
+  "per_class_recall": {
+    "SUPPORTS": 0.7745098039215687,
+    "REFUTES": 0.8043478260869565,
+    "NOT ENOUGH INFO": 0.0
+  },
+  "per_class_f1": {
+    "SUPPORTS": 0.7523809523809524,
+    "REFUTES": 0.8624708624708626,
+    "NOT ENOUGH INFO": 0.0
+  },
+  "runtime": 0.00015234947204589844,
+  "method": "GraphFC (Simulated)"
+}

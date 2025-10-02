@@ -1,0 +1,52 @@
+model_config:
+  default_model: "gpt-3.5-turbo-0125"
+  temperature: 0.0
+  max_tokens: 2048
+  timeout: 60
+  max_retries: 3
+
+graph_construction:
+  k_shot_examples: 10
+  max_triplets: 50
+  entity_types:
+    - "Person"
+    - "Location" 
+    - "Organization"
+    - "Time"
+    - "Number"
+    - "Concept"
+    - "Object"
+    - "Work"
+    - "Event"
+    - "Species"
+
+retrieval:
+  method: "bm25"
+  top_k: 5
+  chunk_size: 512
+  overlap: 50
+
+evaluation:
+  batch_size: 32
+  max_workers: 4
+  metrics:
+    - "macro_f1"
+    - "accuracy"
+    - "precision"
+    - "recall"
+
+datasets:
+  hover:
+    path: "data/hover_dev.json"
+    hops: [2, 3, 4]
+  feverous:
+    path: "data/feverous_dev.jsonl"
+    evidence_types: ["sentence"]
+  scifact:
+    path: "data/scifact/"
+    splits: ["dev"]
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/graphfc.log"

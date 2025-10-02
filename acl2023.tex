@@ -1,0 +1,946 @@
+\title{A Graph-based Verification Framework for Fact-Checking}
+
+\author{
+Yani Huang$^{1}$, Richong Zhang$^{1,2}$\thanks{\ \ Corresponding author.}, Zhijie Nie$^{1}$, Junfan Chen$^{3}$, Xuefeng Zhang$^{1}$  \\
+$^{1}$CCSE, School of Computer Science and Engineering, Beihang University, Beijing, China \\
+$^{2}$Zhongguancun Laboratory, Beijing, China \\
+$^{3}$School of Software, Beihang University, Beijing, China \\
+\texttt{\{huangyn, zhangxf\}@buaa.edu.cn} \\
+\texttt{\{zhangrc, niezj, chenjf\}@act.buaa.edu.cn}
+}
+
+\begin{document}
+\maketitle
+\begin{abstract}
+Fact-checking plays a crucial role in combating misinformation. Existing methods using large language models (LLMs) for claim decomposition face two key limitations: (1) \textit{insufficient decomposition}, introducing unnecessary complexity to the verification process, and (2) \textit{ambiguity of mentions}, leading to incorrect verification results. To address these challenges, we suggest introducing a claim graph consisting of triplets to address the insufficient decomposition problem and reduce mention ambiguity through graph structure. Based on this core idea, we propose a graph-based framework, GraphFC, for fact-checking. The framework features three key components: \textit{graph construction}, which builds both claim and evidence graphs; \textit{graph-guided planning}, which prioritizes the triplet verification order; and \textit{graph-guided checking}, which verifies the triples one by one between claim and evidence graphs. Extensive experiments show that GraphFC enables fine-grained decomposition while resolving referential ambiguities through relational constraints, achieving state-of-the-art performance across three datasets.
+
+\end{abstract}
+
+\section{Introduction}\label{sec:intro}
+
+Fact-checking plays a crucial role in detecting misinformation and preventing the spread of rumors. 
+% In light of the intricate nature of real-world information, extensive research efforts \cite{thorne2018fever, aly2021feverous, jiang2020hover} have been dedicated to fact-checking. These claims often require multiple pieces of evidence for comprehensive verification.  To effectively verify such claims, fact-checking models must possess robust semantic parsing capabilities, that has traditionally been difficult to achieve with pre-trained language models (PLMs). 
+The recent emergence of LLMs, which exhibit powerful semantic understanding capabilities, has opened up new potential solutions for fact-checking. Leveraging these LLMs, recent methodologies \cite{pan2023fact, wang2023explainable, zhao2024pacar} have introduced approaches that decompose claims into textual sub-claims. Such LLM-driven claim decomposition simplifies the verification process and allows for more precise identification of errors within the claim.
+
+
+ % The recent emergence of powerful semantic understanding capabilities in large language models (LLMs) brings new opportunities for multi-hop fact-checking. With the powerful LLMs, recent methods \cite{pan2023fact, wang2023explainable, zhao2024pacar} decompose a multi-hop claim into sub-claims to diminish verification complexity and precisely identify errors within the claim.
+\begin{figure}
+    \centering
+    \includegraphics[width=1\linewidth]{figs/intro.pdf}
+    \caption{An illustration demonstrating the differences between existing textual sub-claims and our graph-based sub-claims. The example is from the HOVER dataset \cite{jiang2020hover}, and the decomposition results are from GPT-3.5-Turbo.}
+    \label{fig:intro}
+\end{figure}
+
+Despite their impressive performance, these decomposition-based methods still face two main challenges. First, without explicit rules, existing models decompose claims into isolated textual sub-claims, each maybe containing multiple subjects, relations, or objects. This decomposition method leads to {\it insufficient decomposition} problem, introducing unnecessary complexity to the claim verification process. As in Figure \ref{fig:intro}, sub-claim 1 comprises two distinct facts: one between ``{\tt the founder}'' and ``{\tt the school}'', while the other between ``{\tt the founder}'' and ``{\tt Christopher}''.
+
+% This approach introduces unnecessary complexity to the claim verification process. As in Figure \ref{fig:intro}, sub-claim 1 comprises two distinct semantic units: specifically, between ``{\tt the founder}'' and ``{\tt the school}'', as well as between ``{\tt the founder}'' and ``{\tt Christopher}''.
+
+Furthermore, there may be multiple unknown mentions within the claim text, and the same unknown mentions could be shared across different sub-claims. By focusing solely on individual sub-claims, this decomposition method increases the {\it ambiguity of mentions}, as the shared unknowns are not contextualized within a unified framework and neglects the broader context and interconnections, thereby amplifying the uncertainty associated with these unknown mentions. As in Figure \ref{fig:intro}, ``{\tt the school}'' in sub-claim 2 presents a referential ambiguity. Fact-checking models may incorrectly associate ``{\tt the school}'' with ``{\tt Somerville College}'' due to an inadequate consideration of the interdependencies between sub-claims.
+
+% To overcome the aforementioned limitations, this study introduces a graph-based representation for both claims and evidences, constructed from minimal sub-claims and sub-evidences by a <subject, relation, object> triplets. The breaking down of claims and evidences into this more finer units facilitates independent verification and validation.  We argue that this level of granularity enhances the clarity and simplifies the fact-checking. 
+To overcome the aforementioned limitations, we suggest converting the claim text into the form of graph using <subject, relation, object> triplets. The graph contains two types of entities: the known entities (the ground entities in the claim) and the unknown entities (the entities existing as references or relationships pending resolution). Using this decomposition method, each triplet can be viewed as a minimal unit that cannot be further decomposed, so the problem of \textit{insufficient decomposition} is eliminated. The graph structure also preserves all contextual information from the original claim, thus preventing \textit{ambiguity of mentions}. 
+
+% Building on such a representation, we then present a graph-based fact-checking framework with three graph-guided components: {\it graph construction}, {\it verification planning} and  {\it fact checking}. Specifically, {\it graph construction} translates the given claim and evidence into claim graph and evidence graph.  {\it verification planning} prioritizes the validation of triplets and determines the logical sequence for checking sub-claims. The {\it fact checking} component includes two procedures: {\it sub-claim completion}, which infers incomplete entities for triplets with unknown entities, and {\it fact matching}, which verifies the accuracy of known entity triplets by comparing sub-claims with evidence. 
+Building on such a foundation, we propose {\MyFC}, a graph-based fact-checking framework consisting of three components: (1) \textit{graph construction}, besides the claim graph, an evidence graph for each claim is constructed correspondingly, inspired by the observation that irrelevant context impairs verification accuracy from recent research \cite{guan-etal-2024-language}. (2) \textit{graph-guided planning}, prioritizes the validation of triplets and determines the logical sequence for checking each triplet. and (3) \textit{graph-guided checking}, which comprises two subtasks: \textit{graph match}, which verifies the accuracy of known entity triplets, and \textit{graph completion}, which infers incomplete entities for triplets with unknown entities.
+
+% isolated textural sub-claims / graph-based sub-claims.
+
+% Insufficient sub-claim decomposition.
+% Fine-grained sub-claims.
+
+% sub-claims contain multiple subjects or objects, which makes the checking process.
+% * Minimal sub-claim decomposition.
+% * solution Graph-based claim graph.
+
+% unknown mentions.
+% These sub-claims share subjects and objects. In addition, the overlaps between these sub-claims widely exist. 
+
+% * to be determined unknown entity 
+% * solely consider each single sub-claim.
+% * increase ambiguity of mentions by omitting other related sub-claims.
+
+
+
+
+%  As shown in Figure \ref{fig:intro}, a four-hop claim is decomposed into two sub-claims: $c_1$ and $c_2$. We first show the issue of {\bf Insufficient Decomposition} with $c_1$: the sub-claim $c_i$ still contains two knowledge hop relations: one between ``\textcolor{orange}{\it the founder}'' and ``\textcolor{purple}{\it the school}'' and another between ``\textcolor{orange}{\it the founder}'' and ``{\it Christopher}''. Another issue of {\bf Loss of Contextual Information} can be reflected with sub-claim $c_2$: ``\textcolor{purple}{\it the school}'' in $c_2$ becomes an ambiguous entity, losing its connection with ``\textcolor{purple}{\it the school}'' in $c_1$. Consequently, when independently verifying $c_2$, the model might incorrectly interpret ``\textcolor{purple}{\it the school}'' as ``\textcolor{red}{\it Somerville College}". This issue creates a paradox: although both $c_1$ and $c_2$ are independently verified as true, the overall claim remains false because ``\textcolor{purple}{\it the school}'' in the two sub-claims cannot be mapped to the same entity.
+
+% % Although the advanced LLM can identify through evidence that ``\textcolor{orange}{\it the founder}'' is ``\textcolor{orange}{\it Elizabeth}'' and ``\textcolor{purple}{\it the school}'' is ``\textcolor{purple}{\it St Hugh's College}'', this method fails to decompose all knowledge hops completely. As a result,
+
+% % Taking $c_1$ as an example, the sub-claim ``The founder of the school was the daughter of Christopher'' still contains two knowledge hop relations: one between ``the founder'' and ``the school'' and another between ``the founder'' and ``Christopher.'' 
+% % The root of this problem lies in entities existing through referential relationships, such as ``\textcolor{orange}{\it the founder}'' and ``\textcolor{purple}{\it the school}'', which cannot be independently verified without context.
+
+% These two problems exemplify the ambivalence of the decomposition principle of the LLM in the absence of clear guidance. On the one hand, the LLM ignored the contextual information of ``\textcolor{purple}{\it the school}'' at the request of the decomposition and produced $c_2$. On the other hand, LLM recognizes that entities existing through referential relationships, such as ``\textcolor{orange}{\it the founder}'', cannot be independently verified without context, producing sub-claim $c_i$ is not completely decomposed. The reason behind this is that decomposing a multi-hop claim into some minimal and information-lossless sub-claim texts is an extremely difficult task. To address these challenges, we suggest to convert the claim texts into the form of graphs. Specifically, we can extract subjects and objects from the claim as entities while extracting their predicates as relations. Therefore, the claim is converted to a claim graph consisting of some triplets. The graph contains two types of entities: the known entities (the ground entities in the claim) and the unknown entities (the entities existing as references or relationships pending resolution). Using this decomposition method, each triplet can be viewed as a minimal claim that cannot be further decomposed, so the problem of insufficient decomposition is eliminated. At the same time, benefiting from the graph structure, all contextual information in the original claim can be preserved. 
+
+% Building on such a foundation, we propose {\MyFC}, a graph-based fact-checking framework consisting of three components: (1) graph construction, (2) graph-guided planning, and (3) graph-guided checking. In the process of {\bf graph construction}, besides the claim graphs, an evidence graph for each claim is constructed correspondingly, inspired by the observation that irrelevant evidence information leads to verification errors from recent research \cite{guan-etal-2024-language}. Then, we model fact-checking as a graph reasoning task, which comprises two subtasks: (a) Graph Match, which directly verifies triples containing known entities, and (b) Graph Completion, which infers missing information for triples containing unknown entities. Therefore, in the process of {\bf graph-guided planning}, we prioritize triples based on the unknown entity count and sequentially execute verification or completion tasks. This strategy effectively models reasoning order, enables precise error localization, and enhances verification accuracy. In the process of {\bf graph-guided checking}, we perform graph matching or graph completion tasks for each triplet in the planned order.
+Empirical studies employing closed-source and open-source LLMs, such as GPT-3.5-Turbo and Mistral-7B, along with widely-used fact verification datasets including HOVER \cite{jiang2020hover}, FEVEROUS \cite{aly2021feverous}, and SciFact\cite{wadden2020fact}, demonstrate the effectiveness of our proposed framework. 
+
+To summarize, the contribution of this study is three-fold.
+\begin{itemize}
+    \item We introduce the graph structure to represent the complex claims, effectively addressing the insufficient decomposition problem and reducing mention ambiguity.
+    \item We propose a graph-based fact-checking framework ({\MyFC}) with three components: \textit{graph construction}, \textit{graph-guided planning}, and \textit{graph-guided checking}.
+    \item We validate {\MyFC}'s effectiveness and rationality through experiments on three public fact-checking datasets, achieving state-of-the-art results. 
+\end{itemize}
+% Extensive experiments on three public fact-checking datasets show that our framework has a clear advantage in verifying multi-hop claims (5.9\% and 8.3\% improvement in HOVER's 3-hop and 4-hop open-book setting, respectively) and can be adapted to non-multi-hop scenarios (5.0\% and 7.7\% improvement in the open-book setting of FEVEROUS and SciFact, respectively), achieving new SOTA on all three datasets (Section \ref{sec:main_results}). In addition, we fully ablate each component in GraphFC and explore the performance difference between GPT3.5-Turbo and Mistral-7B \cite{jiang2023mistral} in each component separately to evaluate the performance under low-cost requirements (Section \ref{sec:ablation_study}). Finally, we revisit the original intention and verify by a case study that GraphFC indeed solves the problems in the current LLM-based decomposition methods, leading to better performance (Section \ref{sec:case_study}).
+
+% We validate our method's effectiveness and rationality in verifying complex multi-hop knowledge claims through experiments on three public fact-checking datasets, achieving state-of-the-art results.
+
+% To ensure accurate entity resolution, we prioritize triples based on the unknown entity count and sequentially execute verification or completion tasks. This strategy effectively models reasoning order, enables precise error localization, and enhances verification accuracy.
+
+
+% while aggregating effective information beforehand to reduce interference from irrelevant contexts.
+
+% To summarize, the contribution of this study is three-folded.
+% \begin{enumerate}
+%     \item We propose a graph-based fact-checking method that effectively preserves semantic chains and reduces interference from irrelevant evidence by transforming claims and evidence into structured graph representations.
+%     \item We reformulate fact-checking as a graph reasoning problem, modeling verification order through node types to achieve precise triplet-level verification through sequential graph verification and completion tasks.
+%     \item We validate our method's effectiveness and rationality in verifying complex multi-hop knowledge claims through experiments on three public fact-checking datasets, achieving state-of-the-art results.
+% \end{enumerate}
+
+% which can be either a large textual corpus (e.g., Wikipedia) or a structured knowledge base.
+% $E$ denotes the set of \textbf{evidence} text that are manually curated or retrieved from $\mathcal{K}$ to support or refute $C$. 
+ % $M_r$ is a retrieval model that retrieves evidence $E_{\text{r}}$ from $\mathcal{K}$. 
+% $M_f$ is a fact-checking model that takes $\{C, E\}$ as input and predicts a label $Y \in \{\text{TRUE}, \text{FALSE}\}$. Note that in multi-hop fact-checking, $C$ expresses multiple pieces of evidence that need to be checked jointly.
+% We define two settings based on the use of  evidence:
+% \textbf{Open-Book Setting:} Evidence $E_{\text{r}}$ is retrieved by $M_r$ from a large textual corpus $K$. Namely,
+% \begin{align}
+%     M_r(K, C) \rightarrow E_{\text{r}},
+% \end{align}
+% \textbf{Gold Evidence Setting:} Evidence $E_{\text{r}}$ is exactly the gold evidence $E_g$. Formally,
+% \[
+% E_{\text{r}} = E_g,
+% \]
+% The objective of multihop fact-checking is to find a model $M_f$ that predicts the veracity label $Y$ of the claim $C$ based on the provided evidence $E$. Formally,
+
+
+\section{Background}
+\paragraph{Fact Checking}
+Given the natural-language claim $C$, fact-checking aims to find a model $M_f$ that predicts the veracity label $Y \in \{\text{True}, \text{False}\}$ of the claim $C$ based on the provided evidence $E$, which can be expressed as
+\begin{align}
+    M_f(C, E) \rightarrow Y.
+\end{align}
+Depending on how $E$ is accessed, fact-checking is usually categorized into two types: (1) Gold Evidence setting, where $E$ is directly given, and (2) Open Book setting, where $E$ needs to be retrieved from a specified knowledge source $\mathcal{K}$.
+
+\paragraph{PLM-based Fact Checking} In the past few years, pre-trained language models have demonstrated strong performance in fact-checking. BERT-based approaches \cite{soleimani2020bert, gi2021verdict} effectively combine evidence retrieval and claim verification. Graph-based methods further enhance reasoning capabilities by modeling relationships between evidence pieces. GEAR \cite{zhou2019gear} employs evidence aggregation through graph networks, while Transformer-XH \cite{zhao2020transformer} introduces extra hop attention for multi-evidence reasoning. 
+% Considering the good performance of PLM-based approaches on simple fact-checking, increasingly challenging fact-checking datasets are proposed. For example, FEVEROUS \cite{aly2021feverous} represent comprehensive benchmarks that require reasoning over both text and tables; HOVER \cite{jiang2020hover} specifically focuses on multi-hop reasoning, and SciFact \cite{wadden2020fact} aims to claim verification for scientific domains.
+
+
+\paragraph{LLM-based Fact-Checking}
+The emergence of LLMs has revolutionized fact-checking through their powerful reasoning capabilities. 
+Chain-of-Thought (CoT) prompting \cite{wei2022chain} facilitates decomposing complex verification into intermediate steps, while self-consistency \cite{wang2022self} boosts accuracy via multiple reasoning paths.  
+Recent work has focused on developing specialized decomposition-based prompting strategies for fact verification. HiSS \cite{zhang2023towards} proposes a hierarchical approach that decomposes claims into verifiable sub-claims, while ProgramFC \cite{pan2023fact} introduces program-guided reasoning to enhance verification accuracy. PACAR \cite{zhao2024pacar} combines planning with customized action reasoning. FOLK \cite{wang2023explainable} introduces a first-order logic-guided method for claim decomposition. 
+However, these decomposition-based methods suffer from insufficient decomposition and mention ambiguity. Our work addresses these limitations by introducing a claim graph built from fine-grained sub-claims that preserves shared unknown mentions via graph structure.
+% \paragraph{Challenges in Multi-hop Fact-Checking} 
+% \textcolor{red}{In multi-hop fact-checking, a claim $C$ is supported by multiple evidences in $E$. To complete the checking task, existing fact-checking methods decompose the claim $C$ into multiple pieces of text $\{c_1, c_2, \cdots, c_m\}$ and check each of them based on the evidence set $E$. However, we discover such a checking process may encounter problems due to the isolation of claim pieces during validation, which breaks their correlations. More generally, we propose the following assertion:
+% \begin{assertion}
+%     Let $P(c_i)$ denote a checking operation on a claim piece $c_i$ and $P(c_i, c_j)$ denote the joint verification of claim-piece set $\{c_i, c_j\}$. Then, for an evidence set $E$, we can conclude that
+% \begin{align}
+%     \!\!\!P(c_1)\!\land\! P(c_2)\cdots P(c_m) \!\ne\! P(c_1, c_2, \cdots, c_m)
+% \end{align}  
+% where the operator $\land$ denote the AND operation.
+% \end{assertion}
+% The above assertion suggests that individually checking all claim piece $c_i$ can not guarantee the correctness of checking a whole claim $C$. Motivated by this observation, we propose to check claim pieces entirely instead of individually. A natural treatment is organizing the claim pieces as a graph and transforming multi-hop fact-checking into a graph reasoning problem.}
+
+\section{Method}
+\begin{figure*}
+    \centering
+    \includegraphics[width=1\linewidth,trim={0 0 0 0},clip]{figs/model.pdf}
+    \caption{Overeview of {\MyFC}. The framework consists of three components: (1) \textit{graph construction} (\&\ref{sec:Graph Construction}), where claim graph and corresponding evidence graph are constructed for each claim; (2) \textit{graph-guided planning} (\&\ref{sec:Graph-Guided Planning}), which determines the verification order based on unknown entity count and plans the sequence of verification tasks; and (3) \textit{graph-guided checking} (\&\ref{sec:Graph-Guided Checking}), which executes either \textit{graph match} for verifying the known entity triples or \textit{graph completion} for inferring incomplete entity.}
+    \label{fig:model}
+\end{figure*}
+\subsection{Fact-Checking over Graphs} \label{preliminaries}
+\paragraph{Task Definition} We first give a graph-style definition for fact-checking here. Concretely, the natural language claim $C$ is converted into a directed graph $G_c = \{(s, r, o), s, o \in \mathcal{E}_c \cup \mathcal{X}_c, r \in \mathcal{R}_c\}$, where $\mathcal{E}_c$ is a known entity set, $\mathcal{X}_c$ is the unknown entity set and $\mathcal{R}_c$ is the relation set. Specifically, $\mathcal{E}_c$ contains the named or disambiguated real-world entities, which are determined when decomposing the claim. In contrast, the entity in $\mathcal{X}_c$ can not be determined according to claim only, as a claim may contain ambiguous references (e.g., pronouns, indefinite references) that cannot be immediately resolved through simple decomposition; instead, these entities require contextual understanding or additional inference steps to be determined. Similarly, the evidence set $E$ is organized into an evidence graph $G_e = \{(s, r, o), s, o \in \mathcal{E}_c, r \in \mathcal{R}_c\}$, inspired by the finding of irrelevant evidence impair verification accuracy \cite{guan-etal-2024-language}. Note that we define the nodes in $G_e$ to contain only the known entities since evidence usually comes from knowledge bases, which are written with a clear presentation of the facts, with few ambiguous references. Finally, we give the sufficient and necessary conditions for a claim to be supported by evidence.
+
+
+
+% $G_c = \{(s, p, o) \mid s, o \in \mathcal{E}_c \cup \mathcal{X}_c, p \in \mathcal{R}\}$, where $(s, p, o)$ represents a triple in the claim graph, $\mathcal{E}_c$ is a known entity set, $\mathcal{X}_c$ is the unknown entity set and $\mathcal{R}_c$ is the relation set. A grounded entity is a node representing a named or disambiguated real-world entity, which is determined after we decompose the claim. An unknown entity is a node that can not be determined after claim decomposition (e.g., pronouns, indefinite references). An unknown entity exists because a claim may contain ambiguous references or relationships that cannot be immediately resolved through simple decomposition; instead, these entities require contextual understanding or additional inference steps to be determined.
+
+% the nodes can be divided into two types: known entities and unknown entities. A grounded entity is a node representing a named or disambiguated real-world entity, which is determined after we decompose the claim. An unknown entity is a node that can not be determined after claim decomposition (e.g., pronouns, indefinite references). An unknown entity exists because a claim may contain ambiguous references or relationships that cannot be immediately resolved through simple decomposition. These entities require contextual understanding or additional inference steps to be determined. For convenience, we define the grounded entity set as $\mathcal{G} = \{g_1, g_2, \dots, g_n\}$ and the unknown entity set as $\mathcal{X} = \{x_1, x_2, \dots, x_m\}$. With an edge set $\mathcal{R}$, we define the claim graph as 
+% \begin{align}
+% G_c = \{(s, p, o) \mid s, o \in \mathcal{G} \cup \mathcal{X}, p \in \mathcal{R}\},
+% \end{align}
+
+% Each $(s, p, o)$ represents a triple in the claim graph, where $s$, $p$, $o$ represent subject, predicate and object, respectively.
+
+% In this way, the fact-checking task is transformed into verifying the correctness of $G_c$ with respect to the evidence graph $G_e$. Formally, we define:
+% \begin{align}
+% M_f(G_c, G_e) =
+% \begin{cases} 
+% \text{TRUE} & \text{ if } G_c \subseteq G_e, \\
+% \text{FALSE} & \text{ otherwise.}
+% \end{cases}
+% \end{align}
+
+\begin{assertion}\label{ass:graph}
+A claim \( G_c \) is supported by evidence \( G_e \) if and only if there exists a one-to-one function \( \phi: \mathcal{E}_c \cup \mathcal{X}_c \to \mathcal{E}_e \) satisfies the following two conditions at the same time:
+    \begin{align*}
+        p_1: & \forall x \in \mathcal{E}_c, \phi(x) = x. \\
+        p_2: & \forall x, y \in \mathcal{E}_c \cup \mathcal{X}_c, \forall r \in \mathcal{R}_c, \\
+        & (x, r, y) \in G_c \Rightarrow (\phi(x), r, \phi(y)) \in G_e.
+    \end{align*}
+\end{assertion}
+Based on this definition, we summarize the benefits of graph-based verification as follows: (1) is performed at the ternary level, preventing the problem of insufficient decomposition; (2) any node in the claim graph corresponds to a unique node in the evidence graph, which satisfies all the relation constraints on the node at the same time, avoiding the ambiguity of mentions.
+% However, due to the presence of unknown entities, this cannot be modeled as a simple verification problem. Unknown entities create links between different parts of the claim that must be resolved through the verification process, making it essential to consider the relationships between all entities rather than verifying each piece in isolation. We next describe our approach in detail to verification on graphs.
+
+% In this way, the fact-checking task is transformed into verifying the correctness of $G_c$ with respect to the evidence graph $G_e$ via a graph reasoning function $M_{f}(G_c, G_e)$.   
+
+% \colorbox{red}{?}We face two problems in graph construction and graph reasoning that make fact-checking over graphs difficult. The first problem is that  atomic decomposition of the claim is difficult because 
+% some claims contain incomplete or ambiguous references that cannot be directly mapped to specific entities without additional context. These unknown entities create links between different parts of the claim that must be resolved through the verification process, making it essential to consider the relationships between all entities rather than verifying each piece in isolation. This increases the checking difficulty because it involves multiple facts to be verify. The second problem is that the unknown entity may mislead the checking process because an undetermined entity can damage the graph reasoning correctness. We next describe our model in detail and the approach to address the above problems. 
+
+\paragraph{{\MyFC}} While Assertion \ref{ass:graph} gives a clear idea of verification, converting it into a practical verification framework requires more effort. To validate our idea, we propose a fact-checking framework called {\bf {\MyFC}} for systematically verifying claims through graphs. As shown in Figure \ref{fig:model}, {\MyFC} consists of three primary components: {\it graph construction}, {\it graph-guided planning}, and {\it graph-guided checking}. 
+
+% Considering the challenging nature of the task, we introduce LLM-based agents in both modules of graph construction and fact-checking, denoted as $\mathcal{A}$.
+% \begin{equation}
+%     M_f = \mathcal{A}_{gc} \circ \mathcal{A}_{gp} \circ \mathcal{A}_{gc}
+% \end{equation}
+% where $\mathcal{A}_{gc}$, $\mathcal{A}_{gp}$ and $\mathcal{A}_{gf}$ represent the modules of graph construction, graph-guided planning, and graph-guided fact-checking, respectively. 
+% Our method transforms both claims and evidence into graph structures, enabling fine-grained verification through graph-theoretical operations. 
+\subsection{Graph Construction}\label{sec:Graph Construction}
+In graph construction, we transform the claim $C$ and the corresponding evidence $E$ into the graph structures. A specialized graph construction agent $\mathcal{A}_{gc}$ is introduced to complete this complex task.
+
+% A specialized graph construction agent $\mathcal{A}_{gc}$ converts the natural language claim into a claim graph $G_c$, preserving both grounded entities and unknown entities. Similarly, it constructs an evidence graph $G_e$ from the retrieved evidence, maintaining alignment with the entities identified in the claim graph.
+% \subsubsection{Claim Graph Construction}
+
+\paragraph{Claim Graph Construction}
+Claim graph construction aims to transform a natural language claim $C$ to a graph $G_c$. The graph construction agent $\mathcal{A}_{gc}$ is expected to extract all triplets from claim text to complete this graph construction, which can be denoted as
+\begin{align}
+    G_c = \{t^c_1, \cdots, t^c_{n_c}\} = \mathcal{A}_{gc}(C)
+\end{align}
+where $t^c_i$ represents the $i$-th triplet extracted from the claim text and $n_c$ represents the extracted triplet number. In practice, the agent $\mathcal{A}_{gc}$ is provided with a task description, an extraction guideline and $K$ fixed in-context examples for generating triples that conform to a particular format. In particular, the unknown entities that appear in the claim are prompted to be replaced with placeholders like $x_i$ to form the triplet. Please refer to Listing \ref{lst:claim_graph} to check the prompt in detail. For example, the triplets extracted from the claim in Figure \ref{fig:model} are shown as follows:
+
+\begin{lstlisting}[style=myStyle*]
+@$t_1^c$@: <@$x_1$@, Daughter_of, Christopher>
+@$t_2^c$@: <@$x_1$@, Founder_of, @$x_2$@>
+@$t_3^c$@: <Kathleen, Sister_of, Christopher>
+@$t_4^c$@: <Kathleen, Principal_of, @$x_2$@>
+\end{lstlisting}
+
+% The main function of the graph construction agent $\mathcal{A}_{gc}$ is to extract relational triples from textual claim $C$.
+% a claim graph $G_c$ that contains both grounded entities and unknown entities in a natural language form.
+% Specifically, we take the natural language claim $C$ as the input of agent $\mathcal{A}_{gc}$. The agent then outputs a claim graph $G_c$ that contains both grounded entities and unknown entities in a natural language form. The main function of the graph construction agent $\mathcal{A}_{gc}$ is to extract relational triples from textual claim $C$.
+
+
+
+% \textbf{Procedure}:
+
+% \textbf{Entity Identification}: The agent $A_{gc}$ identifies entities within $C$. Let:
+% \[
+% \mathcal{G} = \{g_1, g_2, \dots, g_n\},
+% \]
+% be the set of grounded entities, and
+% \[
+% \mathcal{X} = \{x_1, x_2, \dots, x_m\},
+% \]
+% be the set of unknown entities.
+
+% \textbf{Triple Extraction}: The agent extracts relational triples from $C$. Each triple is of the form $(s, p, o)$, where $s \in \mathcal{G} \cup \mathcal{X}$ and $o \in \mathcal{G} \cup \mathcal{X}$.
+
+% \textbf{Formal Representation}:
+% \begin{align*}
+%     G_c &= \bigl(V_C, T_C\bigr), \\
+%     V_C &= \mathcal{G} \cup \mathcal{X}, \\
+%     T_C &= \{(s, p, o) \mid s, o \in V_C\}
+% \end{align*}
+    
+% \textbf{Graph Construction Process}:
+% \begin{align}
+%     \mathcal{A}_{gc}(C) \rightarrow G_c.
+% \end{align}
+\paragraph{Evidence Graph Construction}
+% In the evidence graph construction process, we aim to transform the set of evidence into a graph. 
+% To this end, we first concatenate all evidence texts as a single text. Concretely, we take the concatenated evidence text and the grounded entity set $\mathcal{G}$ as the input of agent $\mathcal{A}_{gc}$ and output an evidence graph $G_e$ in a natural language form. 
+Evidence graph construction aims to convert the natural language evidence $E$ to a graph $G_e$. The agent $\mathcal{A}_{gc}$ in evidence graph construction process identifies entities in evidence set $E$ that are related to the known entities in $\mathcal{E}_c$ and extract the related triplets, which is denoted as
+\begin{align}
+    G_e = \{t^e_1, \cdots, t^e_{n_e}\} = \mathcal{A}_{gc}(E, \mathcal{E}_c)
+\end{align}
+where $t_i^e$ represents the $i$-th triplet extracted from the evidence text and $n_e$ represents the extracted triplet number. In practice, the agent $A_{gc}$ is provided with similar prompts and $K$ in-context examples as that for the construction of claim graphs. Please refer to Listing \ref{lst:evidence_graph} to check the prompt in detail. Even with constraints on the entity set $\mathcal{E}_c$, there are still far more triples extracted from evidence than claims, but usually, only a few of them are useful for fact verification. To improve readability, Figure \ref{fig:model} only shows the useful triples, whose output format is as follows:
+\begin{lstlisting}[style=myStyle*]
+@$t_1^e$@: <St Hugh's College, Founded_by, Elizabeth>
+@$t_2^e$@: <Elizabeth, Daughter_of, Christopher>
+@$t_3^e$@: <Kathleen, Sister_of, Christopher>
+@$t_4^e$@: <Kathleen, Principal_of, Somerville>
+\end{lstlisting}
+% $\mathcal{A}_{gc}$ is to extract relational triples from textual claim $C$. For convenience, we denote the claim graph construction process as $\mathcal{A}_{gc}(C)$.
+
+% \subsubsection{Evidence Graph Construction}
+% \textbf{Input}: Retrieved evidence $E_{\text{r}}$, graph construction agent $A_{gc}$, and the set of grounded entities $\mathcal{G}$ from $G_c$.
+
+% \textbf{Output}: An evidence graph $G_e = (V_E, T_E)$, where each triple in $E_E$ has either its subject or object belonging to $\mathcal{G}$.
+
+% \textbf{Procedure}:
+
+% \textbf{Entity-Guided Extraction}: The agent $A_{gc}$ identifies entities in $E_{\text{r}}$ that correspond to or are related to the grounded entities $\mathcal{G}$. Let:
+% \[
+% \mathcal{G}' = \{g'_1, g'_2, \dots, g'_k\} \subseteq E_{\text{r}},
+% \]
+% represent the subset of grounded entities found in $E_{\text{r}}$.
+
+% \textbf{Triple Extraction}: The agent extracts triples $(s, p, o)$ from $E_{\text{r}}$ such that either $s \in \mathcal{G}$ or $o \in \mathcal{G}$. Formally,
+% \[
+% T_E = \{(s, p, o) \mid s \in \mathcal{G} \text{ or } o \in \mathcal{G}\}.
+% \]
+
+% \textbf{Formal Representation}:
+% \[
+% G_e = \bigl(V_E, T_E\bigr),
+% \]
+% where
+% \[
+% V_E = \mathcal{G}' \cup \{ \text{additional entities in } E_{\text{r}} \},
+% \]
+% \[
+% T_E = \{(s, p, o) \mid s \in \mathcal{G} \text{ or } o \in \mathcal{G}\}.
+% \]
+
+% \textbf{Graph Construction Process}:
+% \[
+% A_{gc}(E_{\text{r}}, \mathcal{G}) \rightarrow G_e.
+% \]
+\subsection{Graph-Guided Planning}\label{sec:Graph-Guided Planning}
+The triplets $\{t^c_1, \cdots, t^c_{n_c}\}$ obtained from the claim graph construction are unordered. If the claim graph does not contain unknown entities (i.e., $\mathcal{X}_c=\varnothing$), it is feasible to verify the triples one by one according to any order. However, due to the presence of unknown entities, the order of validation should be planned because the triple like <$x_1$, Founder\_of, $x_2$>  will be difficult to verify before $x_1$ and $x_2$ are grounded based on known entities. In {\MyFC}, graph-guided planning is denoted as a sorting algorithm $\mathcal{S}_{gp}$, which is expressed as
+\begin{align}\label{eq:planning}
+    \mathcal{T} = \left[\hat{t}_i^c,\cdots,\hat{t}^c_{n_c}\right] = \mathcal{S}_{gp}(G_c)
+\end{align}
+where $\hat{t}_i^c$ denotes the $i$-th triplet to be verified in the subsequent step of fact-checking. Specifically, $S_{gp}$ sorts the triplets of the claim graph by the unknown entity number in the triplet. For any triplet $t=(s, p, o)$, we use $\rho(t)$ to present its priority for verification, which can be calculated by
+\begin{align}
+\rho(t) = \begin{cases} 
+2 & \text{if } s \in \mathcal{X}_c \text{ and } o \in \mathcal{X}_c  \\
+0 & \text{if } s \notin \mathcal{X}_c \text{ and } o \notin \mathcal{X}_c \\
+1 & \text{otherwise}
+\end{cases}
+\end{align}
+where the smaller value of $\rho(t)$ represents the higher priority for verification. The principle behind prioritizing in this way is summarized here: firstly, verify the triplet of two known entities only ($\rho=0$); then, ground all unknown entities from the triplet of a known entity and an unknown entity ($\rho=1$); finally, replace the unknown entities with the ground truth and verify the triplets of two unknown entities ($\rho=2$). After obtaining the priority for each triplet, we sort all triplets in the claim graph based on their priorities in descending order. The order between two triplets with the same priority will be organized randomly. Therefore, a possible ordering for the triples of the claim graph in Figure \ref{fig:model} is as follows:
+\begin{lstlisting}[style=myStyle*]
+@$\hat{t}_1^c$@: <Kathleen, Sister_of, Christopher>
+@$\hat{t}_2^c$@: <@$x_1$@, Daughter_of, Christopher>
+@$\hat{t}_3^c$@: <Kathleen, Principal_of, @$x_2$@>
+@$\hat{t}_4^c$@: <@$x_1$@, Founder_of, @$x_2$@>
+\end{lstlisting}
+
+% the triplet with fewer unknown entities and then verifying the triplet with more unknown entities after the previous verification step increases the certainty.
+
+
+% By analyzing the dependencies between triples in the claim graph, particularly those involving unknown entities, we establish a verification sequence. This ordering ensures that the verification process maintains logical consistency and handles unknown entities effectively. We design a planning step to order the triples in \( G_c \) to facilitate systematic verification. The objective is to ensure that triples containing unknown entities are addressed appropriately to maintain context integrity.
+
+
+
+
+
+% \paragraph{Topological Triplet Ordering}\colorbox{red}{?}
+% When verifying the claim pieces with the evidence set, due to the existence of unknown entities, the checking order is an important factor that should be taken into account. The rationale is that unknown entities increase the uncertainty of verification and a check operation on a triplet with unknown entities is easier to be incorrect checking. Therefore, we should first verify the triplet with fewer unknown entities and then verify the triplet with more unknown entities after the previous verification step incerase the certainty.
+
+% Inspired by the topological ordering algorithm, we design a triplet ordering approach that considers the topological order of the nodes in \( G_c \). Specifically, for each triplet \( \tau = (s, p, o) \), we compute its priority $\rho$ as follows:
+
+
+
+% Then, the triplets are sorted according to their priority from smaller to larger and form a sorted list $\mathcal{T}$. This sorting algorithm ensures that triples are verified in an order that respects their dependencies, with a specific focus on prioritizing triples containing unknown entities. 
+% By leveraging the topological order, we prioritize the verification of triples based on the position of their unknown entities. Triples with unknown entities appearing earlier in the topological order will be checked first, providing a systematic approach to graph reasoning.
+% \begin{align*}
+% \text{priority}(t_i) = \begin{cases} 
+% \text{node\_order.index}(s_i) & \text{if } s_i \in \mathcal{X} \\
+% 0 & \text{if } s_i \notin \mathcal{X}
+% \end{cases} + 
+% \begin{cases} 
+% \text{node\_order.index}(o_i) & \text{if } o_i \in \mathcal{X} \\
+% 0 & \text{if } o_i \notin \mathcal{X}
+% \end{cases}
+% \end{align*}
+
+% \textbf{Sorting:} Sort the triples in ascending order of their priority values: 
+% \[ \text{sorted\_triples} = \text{sort}\big(\{t_1, t_2, \ldots, t_n\}, \ \text{by priority}(t_i)\big). \]
+
+% \begin{algorithm}[h]
+% \caption{TRI\_TOPO\_SORT}
+% \begin{algorithmic}
+% \REQUIRE triples $T_C$ in Claim Graph
+% \ENSURE sorted triples $T_{ord}$
+% \STATE node\_order $\leftarrow$ TopologicalOrdering($V_C$)
+% \FOR{each triple $t_i = (s_i, p_i, o_i)$ in triples}
+%     \STATE priority($t_i$) $\leftarrow$ \( 
+%     \begin{cases} 
+%     \text{node\_order.index}(s_i) & \text{if } s_i \in \mathcal{X} \\
+%     0 & \text{if } s_i \notin \mathcal{X}
+%     \end{cases} + 
+%     \begin{cases} 
+%     \text{node\_order.index}(o_i) & \text{if } o_i \in \mathcal{X} \\
+%     0 & \text{if } o_i \notin \mathcal{X}
+%     \end{cases} \)
+% \ENDFOR
+% \STATE $T_{ord}$ $\leftarrow$ sort(triples by priority($t_i$) ascending)
+% \RETURN \(T_{ord}\)
+% \end{algorithmic}
+% \end{algorithm}
+
+% The planning step orders the triples in \( G_c \) based on their dependencies to ensure coherent verification. During the verification loop, each triple \( \tau \in \mathcal{T} \) in the sorted list will be checked according to the order. 
+
+\subsection{Graph-Guided Checking}\label{sec:Graph-Guided Checking}
+Based on the sorted triple list $\mathcal{T}$ in Equation \ref{eq:planning}, we conduct a fact-checking process for each triplet in the claim graph $G_c$. In general, we expect to generate a binary label $Y_{t} =\{\text{True}, \text{False}\}$ for each triplet $t$, and the fact-verification final label $Y$ with respect to the claim $C$ satisfies:
+\begin{align}
+    Y = Y_{\hat{t}^c_1} \wedge \cdots \wedge Y_{\hat{t}^c_{n_c}}
+\end{align}
+To achieve this goal, we employ two specialized components: a graph match agent $\mathcal{A}_{gm}$ for verifying the triple with two known entities and a graph completion agent $\mathcal{A}_{gcp}$ for verifying the triple with only one known entity and resolving the other unknown entity. Note that $\mathcal{A}_{gcp}$ will keep replacing unknown entities with known entities in the evidence graph. Therefore, as shown in Figure \ref{fig:model}, all triplets originally with two unknown entities will be updated to have one or two known entities, and $\mathcal{A}_{gm}$ or $\mathcal{A}_{gcp}$ can therefore solve them. We also give an algorithm-style fact-checking process in Appendix \ref{appendix:Fact-Checking over Graphs}.
+% To guarantee the correctness of verification, we propose the following principle of the fact-checking process: 
+% \begin{enumerate}
+%     \item If the triple contains only grounded entities, then we verify its validity against \( G_e \). Under this situation, if the validation process returns a {\em false}, then the fact-checking function returns a {\em false}.
+%     \item Otherwise, if the triple contains an unknown entity, we apply a graph completion function to find the correct entity and ground it. If the function fails to find grounding results, then the fact-checking function returns a {\em false}. 
+%     \item  If no {\em false} returns during the fact-checking process, then the fact-checking function returns a {\em true}.
+% \end{enumerate}
+
+
+
+\paragraph{Graph Match}\label{sec:Graph Match} When there is no unknown entity in the triplet $t$, we perform the process of graph match on it. Specifically, The graph match agent $\mathcal{A}_{gm}$ aims to verify whether the triple $t$ is supported by the evidence and output a binary label $Y_t=\{{\rm True}, {\rm False}\}$. Considering $t$ only needs to match with the related triplets in $G_e$, we filter unrelated triplets from $G_c$ to improve verification efficiency. Consequently, the triplets containing the same known entities in $t$ remain for verification, which is denoted as $G^{(t)}_e$. In addition, we empirically find that adding original evidence text $E$ as input will improve fault tolerance (See the analysis in Section \ref{Component_Analysis} for details). Therefore, the verification process of $\mathcal{A}_{gm}$ can be expressed as
+\begin{align}
+    Y_{t} = \mathcal{A}_{gm}(t, G^{(t)}_e, E)
+\end{align}
+In practice, $\mathcal{A}_{gm}$ is provided with a task description and an output-format instruction only, without the in-context examples. Taking $t^c_1$ in Figure \ref{fig:model} as an example, the simplified input and output content  are shown as follows:
+\begin{lstlisting}[style=myStyle*]
+# Input (@$E$@ is omitted)
+@$\hat{t}_1^c$@: <Kathleen, Sister_of, Christopher>
+
+@$G_e^{(t_1)}: \{$@
+    @$t_2^e$@: <Elizabeth, Daughter_of, Christopher>
+    @$t_3^e$@: <Kathleen, Sister_of, Christopher>
+    @$t_4^e$@: <Kathleen, Principal_of, Somerville>
+@$\}$@
+
+# Output
+@$\hat{t}_1^c \equiv t_3^e \Rightarrow Y_{t_1}=True$@ 
+\end{lstlisting}
+
+\paragraph{Graph Completion}\label{sec:Graph Completion} When there is only one unknown entity in the triplet $t$, the graph completion agent $\mathcal{A}_{gc}$ aims to ground the unknown entity $x$ in the triple and output (1) an entity $e \in \mathcal{E}_e$ to replace $x$ in all triplets of claim graph $G_c$ and (2) a binary $Y_t=\{\text{True}, \text{False}\}$. Indicating the success or failure of unknown entity completion, $Y_t$ can be simply expressed as $Y_t = (e \neq \text{None})$. Similar to $\mathcal{A}_{gm}$, we use the filtered related triplets $G_e^{(t)}$ and the original evidence text $E$ as the input. Finally, the completion process of $\mathcal{A}_{gcp}$ can be written as
+\begin{align}
+    e, Y_{t} = \mathcal{A}_{gcp}(t, G^{(t)}_e, E)
+\end{align}
+If $e$ exists, the unknown entity $x$ of the subsequent triplets should be replaced by $e$. Without loss of generality, suppose that $\mathcal{A}_{gcp}$ find the corresponding known entity $e$ for $x$ in the $i$-th triplet $\hat{t}^c_i$, for any $i<j\leq n_c$, $j$-th triplet $\hat{t}^c_j=(s, r, o) \in \mathcal{T}$ also needs to replace $x$ in it with $e$:
+\begin{align}
+\hat{t}^c_j =\begin{cases}
+(e, r, o) & \text{if } p = x \\
+(s, r, e) & \text{if } o = x \\
+(s, r, o) & \text{otherwise}
+\end{cases}
+\end{align}
+Note that while an unknown entity could theoretically exist valid mappings to multiple known entities, in practice \(\mathcal{A}_{gcp}\) typically finds a unique entity in $G_e$ due to the constraining relationships and context in $G_c$, making the determination of $e$ well-defined.
+$\mathcal{A}_{gcp}$ is provided with a task description and an output-format instruction only, without the in-context examples too. Taking $t^c_2$ in Figure \ref{fig:model} as an example, the simplified input and output content  are shown as follows:
+% This approach ensures comprehensive verification of both explicit and implicit claim components
+\begin{lstlisting}[style=myStyle*]
+# Input (@$E$@ is omitted)
+@$\hat{t}_2^c$@: <@$x_1$@, Daughter_of, Christopher>
+
+@$G_e^{(t_2)}=\{$@
+    @$t_2^e$@: <Elizabeth, Daughter_of, Christopher>
+    @$t_3^e$@: <Kathleen, Sister_of, Christopher>
+@$\}$@
+
+# Output
+@$e \rightarrow Elizabeth \Rightarrow Y_{t_2} = (x_1 != {\rm None}) = {\rm True}$@
+
+# Update other triplets
+@$\hat{t}_4^c$@: <@$x_1$@, Founder_of, @$x_2$@>@$\leftarrow$@<Elizabeth, Founder_of, @$x_2$@>
+\end{lstlisting}
+
+\paragraph{Early Stop in Checking} 
+The claim requires all triples to be verified as True for support. In practice, if any triple validates as False, we terminate the process early and set the final label $Y$ to False.
+
+
+% \subsubsection{Graph Match}
+% If a triple $\tau$ in the claim graph $G_c$ is complete, namely, both $s$ and $o$ in $\tau$ are grounded entities, it can be verified via the matching operation over the evidence graph \( G_e \). Therefore, we propose a graph match module, which is responsible for verifying triples in \( G_c \) that do not contain any unknown entities. This module introduces an agent $\mathcal{A}_{gm}$ that directly outputs a binary label indicating whether the triple is supported by the evidence graph \( G_e \).
+
+% The triplet $\tau$ is required to match with each triplet in \( G_c \). This increases the complexity of verification. Therefore, in order to accelerate the graph match process, we first apply a pruning strategy to filter unrelated triplets from \( G_c \). Concretely, only triplets containing the same subject or object with $\tau$ are maintained for verification. This pruning strategy omits triples that are not correlated with the claim component, thus increasing the efficiency of graph match. 
+
+% After pruning, the graph match $\mathcal{A}_{gm}$ takes the triplet $\tau$, the pruned set of evidence graph (denoted as $G^{(\tau)}_e$ for convenience), the evidence set $E$ as input, and outputs a binary label $Y_{\tau}$ that indicates whether the evidence graph supports the given claim component $\tau$. For later use, we represent the graph match module using the following function: 
+% \begin{align*}
+%     Y_{t} = \mathcal{A}_{gm}(\tau, G^{(\tau)}_e, E)
+% \end{align*}
+% The above function is used to verify the correctness of each claim component in the claim graph $G_c$ without involving unknown entities.
+
+
+% \textbf{Input}:  
+% A triple \( t = (s, p, o) \) from \( G_c \), where \( s \) and \( o \) are grounded entities.  
+% The evidence graph \( G_e \).
+
+% \textbf{Output}:  
+% A label \( Y_t \in \{\text{TRUE}, \text{FALSE}\} \), indicating whether \( t \) is supported by \( G_e \).
+
+% \textbf{Procedure}:  
+
+% Pruning: We only select triples \(t_i^E = (s_i^E, p_i^E, o_i^E)\) from the evidence graph \(G_e\) where either the subject \(s_i^E\) or the object \(o_i^E\) corresponds to the subject \(s_i^C\) or the object \(o_i^C\) in the claim triple \(t_i^C = (s_i^C, p_i^C, o_i^C)\) that requires verification. We denote the pruned evidence graph as \(G_e'\).
+
+% Direct Matching: The agent \( A_{gm} \) evaluates the presence and correctness of the triple \( t \) within \( G_e \).
+
+% \textbf{Formal Representation}:
+% \[
+% \text{GraphMatch}(t, G'_E, E_{r}, A_{gm}) \rightarrow Y_t,
+% \]
+% where
+% \[
+% Y_t = A_{gm}(t, G'_E, E_{r}).
+% \]
+% \subsubsection{Graph Completion}
+% In the graph match process, a complete triplet $\tau$ with only grounded entities can be verified via the graph match function. However, as the claim graph has unknown entities, the triplets with missing or unknown entities can not be directly matched using the graph match function $f$. Therefore, the triplets with missing entities are required to be completed before they are sent to the graph match function for validation.   
+
+% To this end, we design a graph completion process to handle triplet $\tau$ in $G_c$ that contain unknown entities. Specifically, we introduce a graph completion agent $\mathcal{A}_{gcp}$ to provide grounding for unknown entities. This agent takes a triplet $\tau$ with unknown entities, the pruned set of evidence graph, and the evidence set as input, and for each unknown entity, it outputs an entity $e$ to complete the corresponding position or outputs {\em none} that indicate no correct entities are found for the unknown entities. For later use, we define the graph completion process as the following function: 
+% \begin{align*}
+% & x = \mathcal{A}_{gcp}(t, G^{(t)}_e, E) \\
+% & Y_{t} = (x \neq {\rm None})
+% \end{align*}
+% where $x$ represents the unknown entity in triplet $t$
+% The above graph completion function enables us to complete the triplets with unknown entities. The completed claim graph can then be verified using the graph match module.
+
+% The \textbf{GraphCompletion} agent \( A_{gcp} \) handles triples in \( G_c \) that contain unknown entities. This agent directly provides the grounding for the unknown entities.
+
+% \textbf{Input}:  
+% A triple \( t = (s, p, o) \) from \( G_c \), where either \( s \) or \( o \) is an unknown entity.  
+% The evidence graph \( G_e \).
+
+% \textbf{Output}:  
+% If successful, the grounded entity \( e \) that replaces the unknown entity.  
+% Otherwise, a special value indicating failure (\( \text{NONE} \)).
+
+% \textbf{Procedure}:  
+
+% Direct Grounding: The agent \( A_{gcp} \) processes the triple \( t \) in the context of \( G_e \) to determine the appropriate grounding for the unknown entity.
+
+% \textbf{Formal Representation}:
+% \[
+% \text{GraphCompletion}(t, G_e, A_{gcp}) \rightarrow g \text{ or } \text{NONE},
+% \]
+% where
+% \[
+% g = A_{gcp}(t, G_e).
+% \]
+
+
+\section{Experiment}
+\subsection{Experiment Setup}
+\paragraph{Datasets} 
+We evaluate {\MyFC} on three widely used fact-checking datasets. \textbf{HOVER} \cite{jiang2020hover} comprises claims necessitating multi-hop reasoning across Wikipedia articles for validation. We employ its validation set, which is categorized into three subsets according to reasoning complexity: two-hop, three-hop, and four-hop. For \textbf{FEVEROUS} \cite{aly2021feverous}, we use its validation set and select claims that only require sentence evidence following~\cite{pan2023fact}. For \textbf{SciFact} \cite{wadden2020fact}, we employ its validation set, where claims with complete evidence that either support or refute the claim are selected. 
+These datasets encompass various domains and complexity levels, offering a thorough benchmark for automated fact-checking systems.
+\paragraph{Baselines}
+We evaluate {\MyFC} against ten strong baselines in two categories. The first category comprises \textbf{pretrained/fine-tuned models}, including \underline{BERT-FC} \cite{soleimani2020bert}, which uses BERT-large for binary classification; \underline{LisT5} \cite{jiang2021exploring}, leveraging T5 with listwise concatenation; \underline{RoBERTa-NLI} \cite{nie2019combining} and \underline{DeBERTaV3-NLI} \cite{he2021debertav3}, both fine-tuned on multiple NLI datasets; and \underline{MULTIVERS} \cite{wadden2021multivers}, which employs LongFormer \cite{beltagy2020longformer} for processing long evidence sequences. The second category consists of \textbf{in-context learning models}, including \underline{Codex} \cite{chen2021evaluating} and \underline{FLAN-T5} \cite{chung2022scaling} with 20-shot learning, \underline{ProgramFC} \cite{pan2023fact} combines Codex and FLAN-T5 for generating reasoning programs. We also implement two prompt-based approaches: \underline{Direct} (zero-shot) and \underline{Decomposition} (10-shot), which break claims into multiple textual sub-claims, using GPT-3.5-Turbo. Although other notable methods like PACAR \cite{zhao2024pacar} exist, they are excluded due to differences in retrieval techniques and the lack of open-source code, ensuring a fair comparison. Details about the baselines are provided in Appendix \ref{appendix:baselines}
+
+% To evaluate the effectiveness of our approach, we conduct comprehensive experiments comparing it with several strong baselines, which can be categorized into two main groups.
+
+% \textbf{Pretrained/Fine-tuned Models} include both pretrained transformers and models fine-tuned for specific tasks. \underline{BERT-FC} \cite{soleimani2020bert} employs BERT-large for claim verification by concatenating the claim and evidence as input for binary classification. \underline{LisT5} \cite{jiang2021exploring} uses T5 as its backbone and adopts a listwise concatenation approach. \underline{RoBERTa-NLI} \cite{nie2019combining} fine-tunes RoBERTa-large on four NLI datasets. \underline{DeBERTaV3-NLI} \cite{he2021debertav3} finetunes the DeBERTaV3 model on 885,242 (claim, evidence, label) annotations from FEVER and four NLI datasets. \underline{MULTIVERS} \cite{wadden2021multivers} employs LongFormer \cite{beltagy2020longformer} to address the challenge of processing long input evidence sequences and is fine-tuned on the FEVER dataset \cite{thorne2018fever}.   
+
+% \textbf{In-context Learning Models} exploit the few-shot learning capabilities of LLMs for fact verification. \underline{Codex} \cite{chen2021evaluating} employs \texttt{Code-davince-002} model with 20 in-context examples for answer generation. \underline{FLAN-T5} \cite{chung2022scaling} utilizes the \texttt{FLAN-T5-XL} \footnote{https://huggingface.co/google/flan-t5-xl} model with a similar 20-shot learning approach. \underline{ProgramFC} \cite{pan2023fact} integrates both \texttt{Codex} and \texttt{FLAN-T5-XL} to generate reasoning programs that guide the verification process using 20 in-domain examples. For fair comparison, we adopt their single reasoning chain configuration (N = 1). \underline{FOLK} \cite{wang2023explainable} implements \texttt{text-davinci-003} as its backbone model with 4-6 in-context examples.
+% Additionally, we implement two prompt-based approaches: \underline{Direct}, which leverages \texttt{gpt-3.5-turbo-0125} with zero-shot prompting, and \underline{Decomposition}, which breaks down claims into sub-questions for independent verification with 10 in-context examples. Although other notable methods like PACAR \cite{zhao2024pacar} exist, they are excluded due to differences in retrieval techniques and the lack of open-source code, ensuring a fair comparison.
+\paragraph{Implementation Details}
+We use \texttt{gpt-3.5-turbo-0125} as our main language model, with \texttt{Mistral-7B-Instruct-v0.3}\footnote{https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3} for ablation study \ref{Backbone_Analysis}. Experiments run on a Tesla V100 SXM2 32GB GPU with Intel(R) Xeon(R) Silver 4214 CPU.
+For Graph Construction, we implement 10-shot learning ($K$=10), more challenging than the 20 examples used by baselines (Codex, FLAN-T5, ProgramFC). Examples are randomly sampled from the training set. Graph completion and matching operate in a zero-shot mode without demonstrations.
+In the Gold Evidence setting (gold), we use provided gold evidence. In the Open Book setting (open), we follow ProgramFC \cite{pan2023fact}, using BM25 \cite{robertson2009probabilistic} retriever via Pyserini \cite{lin2021pyserini} for all methods. The top-5 retrieved paragraphs serve as evidence.
+% We employ \texttt{gpt-3.5-turbo-0125} as our primary language model for all experiments. We additionally utilize \texttt{Mistral-7B-Instruct-v0.3}\footnote{https://huggingface.co/mistralai/Mistral-7B-Instruct-v0.3} for ablation study \ref{Backbone_Analysis}. All experiments are conducted on a system equipped with a Tesla V100 SXM2 32GB GPU and an Intel(R) Xeon(R) Silver 4214 CPU.
+
+% For Graph Construction Component, we adopt a more challenging 10-shot learning ($K$=10) compared to most baselines that use 20 examples (e.g., Codex, FLAN-T5, ProgramFC). The in-context examples are randomly sampled from the training set. More challengingly, our graph completion and matching operations are performed in a zero-shot manner without any demonstrations.
+
+% In Gold Evidence setting (abbreviated as gold), we leverage the gold evidence provided for verification. In Open Book setting (abbreviated open) experiment, we follow 
+% ProgramFC \cite{pan2023fact}, employing BM25 \cite{robertson2009probabilistic} as a retriever, implemented using the Pyserini toolkit \cite{lin2021pyserini}, for both our method and baselines. We use the top-5 paragraphs retrieved from the knowledge corpus as evidence.
+
+\paragraph{Evaluation Metric}
+Following \cite{pan2023fact} and \cite{wang2023explainable}, we employ the macro-F1 score as the primary metric, which provides a balanced evaluation across all categories.
+
+\subsection{Main Results}\label{sec:main_results}
+\begin{table*}[t]
+
+\centering
+\renewcommand{\arraystretch}{0.9}
+\resizebox{\textwidth}{!}{
+\begin{tabular}{l|c c c c c c|c c|c c}
+\hline
+\multirow{2}{*}{Model} & \multicolumn{2}{c}{HOVER(2-hop)} & \multicolumn{2}{c}{HOVER(3-hop)}& \multicolumn{2}{c|}{HOVER(4-hop)} & \multicolumn{2}{c|}{FEVEROUS} & \multicolumn{2}{c}{SciFact} \\
+
+% & \multicolumn{2}{c}{2-hop} & \multicolumn{2}{c}{3-hop} & \multicolumn{2}{c|}{4-hop} & \multicolumn{2}{c|}{} & \multicolumn{2}{c}{} \\
+
+& gold & open & gold & open & gold & open & gold & open & gold & open \\
+\hline
+\rowcolor{gray!10}
+\multicolumn{11}{c}{\textit{Pretrained/Fine-tuned}} \\
+BERT-FC & 53.40 & 50.68 & 50.90 & 49.86 & 50.86 & 48.57 & 74.71 & 51.60 & - & - \\
+LisT5 & 56.15 & 52.56 & 53.76 & 51.89 & 51.67 & 50.46 & 77.88 & 54.15 & - & - \\
+RoBERTa-NLI & 74.62 & 63.62 & 62.23 & 53.99 & 57.98 & 52.40 & 88.28 & 57.80 & - & - \\
+DeBERTaV3-NLI & \underline{77.22} & 68.72 & 65.98 & 60.76 & 60.49 & 56.00 & \underline{91.98} & 58.81 & - & - \\
+MULTIVERS & 68.86 & 60.17 & 59.87 & 52.55 & 55.67 & 51.86 & 86.03 & 56.61 & 77.24 & 54.17 \\
+\rowcolor{gray!10}
+\multicolumn{11}{c}{\textit{In-context learning}} \\
+Codex & 70.63 & 65.07 & 66.46 & 56.63 & 63.49 & 57.27 & 89.77 & 62.58 & - & - \\
+FLAN-T5 & 73.69 & 69.02 & 65.66 & 60.23 & 58.08 & 55.42 & 90.81 & 63.73 & - & - \\
+ProgramFC & 74.10 & \underline{69.36} & 66.13 & \underline{60.63} & \underline{65.69} & \underline{59.16} & 91.77 & \underline{67.80} & \underline{84.90} & 70.63 \\
+
+% \rowcolor{gray!30}
+Direct & 73.53 & 68.85 & 65.09 & 53.77 & 59.03 & 46.93 & 88.44 & 66.41 & 73.30 & 60.54 \\
+% \rowcolor{gray!30}
+Decompostion & 72.67 & 65.40 & \underline{66.29} & 54.65 & 60.88 & 54.41 & 85.79 & 59.38 & 81.64 & \underline{72.92} \\
+\hline
+\rowcolor{gray!50}
+\textbf{{\MyFC}} & \textbf{77.85} & \textbf{73.44} & \textbf{70.35} & \textbf{66.54} & \textbf{71.42} & \textbf{67.47} & \textbf{93.75} & \textbf{72.88} & \textbf{87.37} & \textbf{80.63} \\
+\hline
+\end{tabular}}
+\caption{Comparison of main results (macro-F1 in \%) across the HOVER, FEVEROUS, and SciFact datasets in both open-book and gold evidence settings. The best results are in \textbf{bold}, and the second-best results are \underline{underlined}.}
+\label{tab:main_results}
+\end{table*}
+\begin{figure*}[!t]
+    \centering
+    \subfloat[Component analysis of {\MyFC} on HOVER in terms of macro-F1.]
+    {
+        \includegraphics[width=0.48\linewidth]{figs/abl_1.png}
+        \label{fig:abl_1}
+    }
+    \hfill
+    \subfloat[Backbone analysis  of {\MyFC} (GPT-3.5 vs Mistral-7B) on HOVER in terms of macro-F1.]
+    {
+        \includegraphics[width=0.48\linewidth]{figs/abl_2.png}
+        \label{fig:abl_2}
+    }
+    \caption{Ablation studies of {\MyFC}.}
+    \label{fig:ablation}
+\end{figure*}
+
+{\MyFC} significantly outperforms state-of-the-art baselines, as shown in Table~\ref{tab:main_results}, highlighting three key findings that confirm its effectiveness.
+
+\noindent {\textbf{{\MyFC} consistently outperforms existing methods across all  settings.}} On HOVER, we achieve accuracy improvements of 3.75-5.73\% in gold settings and 4.08-8.31\% in open-book settings across 2-4 hop claims compared to ProgramFC. For FEVEROUS, our method outperforming ProgramFC by 1.98\% and 5.08\% in gold and open settings, respectively. On SciFact, we obtain 2.47\% and 7.71\% gains in gold and open settings, respectively.
+% On the HOVER dataset, we achieve substantial improvements in both gold and open-book settings, with accuracy gains of 3.75\% and 4.08\% respectively for 2-hop claims, 4.22\% and 5.91\% for 3-hop claims, and 5.73\% and 8.31\% for 4-hop claims compared to ProgramFC, the strongest baseline. For the FEVEROUS dataset, our method achieves 93.75\% accuracy in the gold setting and 72.88\% in the open-book setting, surpassing ProgramFC by 1.98\% and 5.08\%, respectively. On the SciFact dataset, our approach achieves 87.37\% accuracy in the gold setting and 80.63\% in the open-book setting.
+
+\noindent {\textbf{{\MyFC} shows increasing performance gains with claim complexity.}} Results on HOVER shows that performance improvements increase with reasoning complexity, from 4.08\% for 2-hop to 8.31\% for 4-hop claims in open setting. This validates the effectiveness of our graph-based approach in handling complex claims.
+% Analysis of the HOVER dataset reveals that the improvement margin increases consistently with reasoning complexity, from 3.75\% for 2-hop claims to 5.73\% for 4-hop claims in the gold setting. These results validate our graph-based approach's effectiveness in handling complex claims by preserving unknown entities through topological verification of interconnected triplets, addressing a key limitation of conventional decomposition methods.
+
+\noindent {\textbf{{\MyFC} maintains robust performance in open setting.}} 
+The performance gap between open and gold setting is smaller with {\MyFC}, showing a 3.95\% gap for 4-hop claims on HOVER compared to ProgramFC's 6.53\%. This improvement stems from our evidence graph construction that effectively filters and organizes relevant information to enhance reasoning.
+
+% Notably, the performance gap between open-book and gold settings is significantly smaller in our approach compared to baselines. For 4-hop claims, our method maintains a gap of only 3.95\% between gold and open-book settings, while ProgramFC shows a 6.53\% difference. This improvement can be attributed to our evidence graph construction, which effectively extracts and organizes relevant information while filtering out irrelevant context, thereby enhancing the language model's reasoning capabilities through structured representation.
+
+\subsection{Ablation Study}\label{sec:ablation_study}
+
+\subsubsection{Component Analysis}\label{Component_Analysis}
+To evaluate the effectiveness of key components in {\MyFC}, we conduct ablation experiments by removing or modifying specific components. As shown in Figure \ref{fig:abl_1}, the variant \textit{w/o EG} eliminates the \underline{E}vidence \underline{G}raph Construction component, directly performing fact-checking on raw evidence texts. \textit{only EG} exclusively utilizes the constructed evidence graph without referencing the original text. \textit{w/o GP} removes the \underline{G}raph-Guided \underline{P}lanning component, leading to independent parallel verification of each triple in the claim graph. 
+
+% \textit{w/o GMA} disables the \underline{g}raph \underline{m}atch \underline{a}gent, thereby removing the capability for grounded triple verification. Finally, \textit{w/o GCA} eliminates the \underline{g}raph \underline{c}ompletion \underline{a}gent, disabling the model's ability to resolve {\fe} during the verification process.
+\noindent {\textbf{Effectiveness of evidence Graph construction.}} Removing the evidence graph (\textit{w/o EG}) causes performance drops at all hop levels on HOVER, especially a significant decrease at 4 hops claims, which contain richer knowledge and longer text, requiring extensive evidence for verification. This demonstrates the advantage of evidence graphs in constructing structured evidence that effectively filters out irrelevant context. On the other hand, using only the evidence graph (\textit{only EG}) leads to performance loss at all levels, indicating that relying solely on the graph can result in the loss of valuable information from the evidence text.
+
+% The experimental results demonstrate the crucial role of evidence graph in our framework. When removing the evidence graph (\textit{w/o EG}), we observe performance degradation across all hop levels in the HOVER dataset, with particularly significant decline in 4-hop scenarios (9.75\% decrease). This substantial performance drop indicates that the evidence graph construction effectively extracts pertinent information from evidence texts and eliminates irrelevant contextual noise. Conversely, relying solely on the evidence graph (\textit{only EG}) leads to notable performance deterioration across all hop levels, suggesting that exclusive dependence on the graph structure may result in information loss from the evidence text.
+\noindent {\textbf{Effectiveness of graph-guided planning.}} Removing graph-guided planning (\textit{w/o GP}) significantly decreases overall performance, especially in 4-hop claims on HOVER which require multi-step reasoning, highlighting its crucial role in structuring multi-step reasoning and ensuring that unknown entities are properly identified in complex verification tasks.
+
+% The effectiveness of graph-guided planning is evident from the performance decline observed in its absence (\textit{w/o GP}). These results indicate that graph-guided planning plays a vital role in organizing the verification process, particularly for complex claims requiring multiple reasoning steps.
+
+% Further analysis reveals varying impacts of the graph match agent and graph completion agent. The removal of the graph match agent (\textit{w/o GMA}) leads to more substantial performance degradation compared to removing the graph completion agent (\textit{w/o GCA}). This disparity can be attributed to the distribution of reasoning tasks in HOVER dataset. As shown in Table~\ref{tab:task_dist }, graph match operations constitute 86.52\%, 62.88\%, and 57.96\% of the verification tasks in 2-hop, 3-hop, and 4-hop claims, respectively. 
+\begin{table*}[!hbt]
+    \centering
+    \includegraphics[width=\linewidth]{figs/case_study.pdf}
+    \caption{Case study of representative examples from HOVER comparing Decomposition and {\MyFC}. }
+    \label{tab:case_study}
+    \vspace{-5mm}
+\end{table*}
+\subsubsection{Backbone Analysis} \label{Backbone_Analysis}
+To investigate the impact of different language models on model performance, we conducted ablation experiments by replacing GPT-3.5 Turbo with Mistral-7B across three components: graph construction, matching, and completion agents. The baseline configuration using GPT-3.5 for all components is denoted as \textit{GGG}, while other configurations include \textit{MMM} (all Mistral-7B), \textit{GMM}, \textit{GMG}, and \textit{GGM} (combinations of both models).
+
+\noindent {\textbf{Graph construction component critically depends on advanced LLM capabilities.}} The full Mistral-7B configuration (\textit{MMM}) shows significant performance degradation, with 2-hop accuracy dropping from 77.85\% to 65.84\%. Graph construction requires strong reasoning abilities to decompose complex claims into fine-grained triples.
+
+\noindent {\textbf{Graph match component shows higher model sensitivity than Completion.}} The graph matching configuration (\textit{GMG}'s) leads to a notable drop in 2-hop accuracy to 75.31\%, while the completion component (\textit{GGM}'s) remains relatively robust with accuracy only decreasing to 76.01\%. This aligns with the distribution of reasoning tasks on HOVER, as shown in Figure \ref{fig:dist}, where matching operations dominate verification tasks across all hops. These findings suggest that while graph construction requires powerful models, other components can utilize lighter models when prioritizing computational efficiency over maximum accuracy.
+
+% To investigate the dependency of different components on LLM capabilities, we conduct ablation experiments by replacing \texttt{gpt-3.5-turbo-0125} with \texttt{Mistral-7B-Instruct-v0.3} in three components: graph construction agent, graph match agent, graph completion agent. As shown in Figure \ref{fig:abl_2}, we denote the baseline configuration where all components use GPT-3.5 as \textit{GGG}. The replacement configurations are: \textit{MMM} where all components use Mistral-7B, \textit{GMM} where both graph match agent and graph completion agent use Mistral-7B, \textit{GMG} where only graph match agent uses Mistral-7B, and \textit{GGM} where only graph completion agent uses Mistral-7B
+
+% The experimental results reveal significant performance variations across different configurations. \textit{MMM} leads to a substantial performance drop on 2-hop claims (77.85\% to 65.84\%). Performance degradation becomes more severe as hop count increases, with 3-hop accuracy dropping by 27.11 percentage points (70.35\% to 43.24\%). This indicates that graph construction heavily relies on the advanced reasoning capabilities of LLMS to accurately decompose complex claims into fine-grained triple representations.
+
+% Component-wise analysis shows varying degrees of model dependency, suggesting the possibility of flexible model deployment based on specific requirements. The graph-match component demonstrates higher sensitivity, as evidenced by \textit{GGM}'s significant performance drop on 2-hop claims (77.85\% to 75.31\%). The graph-completion component exhibits relative robustness to model replacement, with \textit{GGM} showing minimal impact on 2-hop accuracy (77.85\% to 76.01\%). This disparity can be attributed to the distribution of reasoning tasks in HOVER dataset. As depicted in Figure \ref{fig:dist}, graph match operations constitute 86.52\%, 62.88\%, and 57.96\% of the verification tasks in 2-hop, 3-hop, and 4-hop claims, respectively. This modular design allows for strategic model selection: while graph construction requires more powerful models for optimal performance, other components can leverage lighter models when computational efficiency is prioritized over maximum accuracy.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=1\linewidth]{figs/dist.png}
+    \caption{Distribution of task proportions for graph match and graph completion on HOVER}
+    \label{fig:dist}
+\end{figure}
+
+
+\subsection{Case Study}\label{sec:case_study}
+To demonstrate {\MyFC}'s ability to address the limitations of existing decomposition-based methods, we compare it with the baseline Decomposition method using four examples of varying complexity in Table~\ref{tab:case_study}. For clarity, only essential triples from the evidence graph that directly support or refute the claim are shown.
+The first example highlights the ability of both methods to handle simple claims with clear entity relationships. The third example exposes a major limitation of the Decomposition method: when verifying the sub-claim about ``Arabia Mountain's producer," it fails to maintain contextual relationships between decomposed sub-claims, resulting in ambiguity around "the man." In contrast, {\MyFC} preserves these connections through its graph structure, explicitly modeling entities and their relationships as triples. Additionally, graph-guided planning optimizes the verification order, positioning triples with unknown entities at both ends for later processing. It demonstrates that {\MyFC} improves accuracy by preserving contextual relationships and ensuring an optimal verification sequence.
+% To demonstrate the effectiveness of {\MyFC}, we conduct detailed case studies comparing {\MyFC} with the baseline Decomposition method. Table~\ref{tab:case_study} presents four representative examples with varying complexity to ensure comprehensive evaluation. We present only the essential triples from the evidence graph that directly support or refute the claim to ensure clarity. The first example shows how both methods can effectively handle simple claims with straightforward entity relationships. The third example reveals a critical limitation of the Decomposition method. When processing the claim about Arabia Mountain's producer and song authorship, the baseline method fails to maintain contextual relationships between decomposed sub-claims, leading to incorrect interpretation of entity references like "the man". In contrast, {\MyFC} effectively preserves these relationships through its graph structure, where entities and their relationships are explicitly modeled as triples. Furthermore, graph-guided planning ensures optimal verification order by positioning triples with unknown entities at both ends for later processing. The empirical results demonstrate that our method effectively addresses complex fact-checking scenarios by preserving contextual relationships and ensuring proper checking sequence, ultimately leading to more accurate claim verification.
+
+\section{Conclusion}
+In this paper, we proposed {\MyFC}, a graph-based fact-checking framework that effectively addresses two critical challenges in LLM-driven decomposition-based method: insufficient decomposition and mention ambiguity. By converting claims into graph structures, our approach preserves contextual relationships while enabling fine-grained verification through minimal triplet units. Experimental results demonstrate GraphFC's effectiveness across three benchmarks, achieving state-of-the-art performance with significant improvements in complex reasoning scenarios. Ablation studies highlight the crucial role of graph construction and graph-guided planning in handling complex claims. These findings establish GraphFC as an effective approach for enhancing automated fact-checking systems.
+% In this paper, we proposed {\MyFC}, a graph-based fact-checking framework that addresses the challenges of insufficient decomposition and ambiguity of mentions in textual sub-claim decomposition method. By converting claims into graph structures, our approach preserves contextual relationships while enabling fine-grained verification through minimal triplet units. Experimental results demonstrate {\MyFC}'s effectiveness across three benchmarks, achieving state-of-the-art performance with significant improvements in complex reasoning scenarios. Ablation studies highlight the crucial role of graph construction and graph-guided planning in handling complex claims. These findings establish {\MyFC} as an effective approach for enhancing automated fact-checking systems, particularly for claims requiring multi-hop reasoning.
+
+\section*{Limitations}
+While {\MyFC} demonstrates substantial improvements over existing approaches, it exhibits limitations in two aspects. 
+
+\begin{itemize}
+    \item  Our approach achieves relatively modest gains for simple claims verification. As shown in Table~\ref{tab:main_results}, the improvement margin on 2-hop claims in the HOVER dataset (0.63\% in gold setting) is notably smaller compared to 3-hop and 4-hop claims. This limitation is inherent in our method's design: while {\MyFC} excels at handling complex multi-hop reasoning, for simple claims where conventional methods already perform well, the sophisticated graph construction and matching procedures may introduce unnecessary complexity.
+    \item The graph construction component of our method relies on the reasoning capabilities of LLMs. As demonstrated in Figure~\ref{fig:abl_2}, replacing GPT-3.5 with Mistral-7B in the graph construction phase leads to a significant decline in performance. This suggests that the accuracy of decomposing claims into fine-grained triple representations benefits from the advanced reasoning capabilities of more powerful language models. Future work will focus on developing lighter-weight graph construction techniques and exploring more efficient verification strategies for simple claims while maintaining the current effectiveness on complex reasoning tasks.
+\end{itemize}
+
+\bibliography{acl2023}
+\bibliographystyle{acl_natbib}
+
+\appendix
+\section*{Appendix}
+\section{Graph-Guided Fact-Checking}\label{appendix:Fact-Checking over Graphs}
+Here we give an algorithm-style graph-guided fact-checking process in algorithm \ref{alg:1}. Based on the sorted triple list $\mathcal{T}$ in Equation \ref{eq:planning}, we conduct a fact-checking process for each triplet in the claim graph $G_c$. 
+\begin{enumerate}
+    \item If the triple contains only grounded entities, we apply a graph match agent to verify its validity against \( G_e^{(t)} \). Under this situation, if the validation process returns a {\em false}, then the fact-checking function returns a {\em false}.
+    \item Otherwise, if the triple contains an unknown entity, we apply a graph completion agent to find the correct entity and ground it. If grounding is successful, we update both the claim graph $G_c$ and evidence graph $G_e$. If the function fails to find grounding results, the fact-checking function returns {\em false}.
+    \item  If no {\em false} returns during the fact-checking process, then the fact-checking function returns a {\em true}.
+\end{enumerate}
+
+\begin{algorithm}[ht]
+\caption{Graph-Guided Fact-Checking}
+\label{alg:1}
+\begin{algorithmic}
+\REQUIRE claim graph \( G_c \) , evidence graph \( G_e \), evidence set \(E\), agents $\mathcal{A}_{gc}$, $\mathcal{A}_{gm}$, $\mathcal{A}_{gcp}$, and sorted triples $\mathcal{T}$
+\ENSURE fact-checking result $Y$ (True or False)
+\STATE \( Y \leftarrow \text{True} \)
+\FOR{each \( t \) in \( \mathcal{T} \)}
+    \STATE \( (s, p, o) \leftarrow t \)
+    \IF{  $s \notin \mathcal{X}_c \text{ and } o\notin \mathcal{X}_c$}
+            \STATE \(Y_{t} \leftarrow \mathcal{A}_{gm}(t, G^{(t)}_e, E)\)
+        \IF{\( Y_{t} == \text{False} \)}
+            \STATE \( Y \leftarrow \text{False} \)
+            \STATE \textbf{break}
+        \ENDIF
+        
+    \ELSE
+        \STATE \( e, Y_{t} \leftarrow \mathcal{A}_{gcp}(t, G^{(t)}_e, E) \)
+        \IF{\( Y_{t} == \text{False} \)}
+            \STATE \( Y \leftarrow \text{False} \)
+            \STATE \textbf{break}
+        \ELSE
+            \STATE \( \mathcal{E}_c \leftarrow \mathcal{E}_c \cup e \)\COMMENT{Update Claim Graph}
+            \STATE \( G_e \leftarrow G_e \cup \mathcal{A}_{gc}(E, [e]) \)\COMMENT{Update Evidence Graph}
+        \ENDIF
+    \ENDIF
+\ENDFOR
+\RETURN \( Y \)
+\end{algorithmic}
+\end{algorithm}
+
+\section{Baseline Details}
+\label{appendix:baselines}
+We present detailed implementation for our baseline models across two categories:
+\textbf{Pre-trained/Fine-tuned Models:}
+\begin{itemize}
+\item \textbf{BERT-FC} \cite{soleimani2020bert}: Employs \texttt{bert-large-uncased} (345M parameters) for binary classification, concatenating claims and evidence as '[CLS] claim [SEP] evidence'. Fine-tuned using 20 random examples from the dataset.
+\item \textbf{LisT5} \cite{jiang2021exploring}: Implements \texttt{t5-large} with listwise concatenation, processing all evidence sentences simultaneously for binary classification (Supports/Refutes).
+\item \textbf{RoBERTa-NLI} \cite{nie2019combining}: RoBERTa-large model fine-tuned on SNLI~\cite{DBLP:conf/emnlp/BowmanAPM15}, MNLI~\cite{DBLP:conf/naacl/WilliamsNB18}, FEVER-NLI~\cite{DBLP:conf/aaai/NieCB19}, ANLI (R1, R2, R3)~\cite{DBLP:conf/acl/NieWDBWK20} datasets, with additional fine-tuning using 20 task-specific examples from HOVER/FEVEROUS.
+\item \textbf{DeBERTaV3-NLI} \cite{he2021debertav3}: DeBERTaV3-large model trained on 885,242 NLI pairs from FEVER and other NLI datasets (MNLI, ANLI, LingNLI~\cite{DBLP:conf/emnlp/ParrishHALNWAAL21}, WANLI~\cite{DBLP:journals/corr/abs-2201-05955}).
+\item \textbf{MULTIVERS} \cite{wadden2021multivers}: Implements LongFormer \cite{beltagy2020longformer} architecture to handle extended evidence sequences, specifically fine-tuned on FEVER \cite{thorne2018fever} dataset.
+\end{itemize}
+\textbf{In-context Learning Models:}
+\begin{itemize}
+\item \textbf{Codex} \cite{chen2021evaluating}: Utilizes \texttt{code-davinci-002} with 20 in-context examples.
+\item \textbf{FLAN-T5} \cite{chung2022scaling}: Leverages \texttt{FLAN-T5-XXL} (3B parameters) with 20 in-context examples, using structured prompts for claim verification.
+\item \textbf{ProgramFC} \cite{pan2023fact}: Combines Codex and FLAN-T5 for generating reasoning programs. For fair comparison, we adopt their single reasoning chain configuration (N = 1).
+\item \textbf{Direct, Decomposition}: Implements \texttt{gpt-3.5-turbo-0125} using two approaches: (1) zero-shot prompting (Direct) and (2) claim decomposition with 10 in-context examples (Decomposition). The latter approach first breaks down complex claims into independently verifiable textual sub-claims, then applies direct prompting to verify each sub-claim. The complete prompts are provided in Appendix \ref{appendix:prompts}. 
+\end{itemize}
+
+
+\section{Prompts}\label{appendix:prompts}
+Below, we present the prompt templates used for the baseline methods (Direct, Decomposition) and {\MyFC}. For clarity, we have omitted the in-context-learning examples.
+\begin{lstlisting}[caption=Direct Prompt, label={lst:direct_prompt}]
+[[Evidence]]
+Based on the above information, is it true that [[Claim]]? True or false? The answer is: 
+\end{lstlisting}
+\begin{lstlisting}[caption=Decompostion Prompt, label={lst:decompostion_prompt}]
+## Task Description:
+Break down the given into multiple sub claims that:
+- Cannot be further divided into simpler meaningful statements
+- Has a clear truth value (true or false)
+- Contains a single subject and predicate
+- Does not contain logical connectives (and, or, if-then, etc.)
+
+## Input Format:
+A complex claim or statement.
+
+## Output Format:
+Each atomic proposition should be presented on a new line, separated by blank lines for clarity.
+
+## Examples:
+(... more in-context examples here ...)
+
+## Real Data:
+Input: [[Claim]]
+Output:
+\end{lstlisting}
+\begin{lstlisting}[caption=Claim Graph Construction Prompt, label={lst:claim_graph}]
+# Knowledge Graph Construction Specification
+
+You are an expert in knowledge graph construction. Your task is to parse natural language claims into a formal claim graph representation by following these specifications:
+
+## 1. Entity Types
+- Person: Real individuals
+- Location: Places, cities, regions
+- Organization: Companies, institutions, groups 
+- Time: Dates, years, periods
+- Number: Numerical values
+- Concept: Abstract ideas, categories
+- Object: Physical items
+- Work: Creative works (books, songs, etc.)
+- Event: Occurrences, happenings
+- Species: Biological organisms
+
+## 2. Constraint Types
+- temporal: Time-related constraints (year, date, period)
+- spatial: Location-related constraints (in, at, from)
+- condition: Qualifying conditions or attributes
+- context: Broader situational context
+
+## 3. Atomic Proposition Rules
+
+### Definition
+An atomic proposition must:
+- Express a single, indivisible fact
+- Cannot be broken down into simpler meaningful statements
+- Must preserve all relevant context
+- Must maintain temporal and spatial relationships
+
+### Decomposition Guidelines
+1. Structural Analysis:
+   - Split complex sentences at conjunction words (and, but, or)
+   - Separate conditional statements (if/then) into distinct propositions
+   - Identify dependent clauses and their relationships
+   - Preserve modifiers and qualifiers with their related concepts
+
+2. Semantic Preservation:
+   - Maintain causal relationships
+   - Preserve temporal order
+   - Keep spatial relationships intact
+   - Retain contextual qualifiers
+
+## 4. Fuzzy Entity Identification Process
+
+### Entity Reference Types
+1. Direct Reference:
+   - Uses proper name ("John", "Paris")
+   - Specific numerical values
+   - Well-defined concepts
+
+2. Indirect Reference:
+   - Uses descriptions ("the teacher", "that city")
+   - Role-based references ("the founder", "the mother")
+   - Attribute-based references ("the tall building")
+
+3. Contextual Reference:
+   - Requires information from other statements
+   - Part of a collective reference
+   - Implied entities
+
+### Fuzzy Entity Decision Tree
+1. Initial Check:
+   - Is the entity referred to by proper name?  Not fuzzy
+   - Is the entity a specific number or date?  Not fuzzy
+   - Is the entity a well-defined concept?  Not fuzzy
+
+2. Context Analysis:
+   - Does the entity require contextual information?  Fuzzy
+   - Is the entity part of a group or collection?  Fuzzy
+   - Is the entity only described by role or attribute?  Fuzzy
+   - Is the entity referenced through relationships?  Fuzzy
+
+3. Coreference Resolution:
+   - Track entities across multiple atomic propositions
+   - Maintain consistent fuzzy entity IDs ($A$, $B$, etc.)
+   - Document relationships between fuzzy entities
+
+## 5. Output Format
+
+### 1. Entity Definitions
+```python
+entities = [
+    {
+        "name": str,       # Entity identifier 
+        "type": str,       # One of the predefined entity types
+        "is fuzzy": bool   # True if entity meets fuzzy criteria
+    }
+]
+```
+
+### 2. Relationship Quadruples with Atomic Propositions
+```python
+quads = [
+    {
+        "atomic proposition": str,  # The original atomic statement this quad represents
+        "subject": str,            # Entity name or identifier
+        "predicate": str,          # Relationship type
+        "object": str,             # Entity name, identifier, or value
+        "constraint": {            # Optional constraint
+            "type": str,           # One of the predefined constraint types
+            "value": str           # Constraint value
+        }
+    }
+]
+```
+
+## 6. Validation Steps
+
+### 1. Quad and Atomic Proposition Validation
+For each quad:
+- Verify its atomic proposition cannot be further decomposed
+- Check if it captures all relevant context
+- Ensure temporal/spatial information is preserved
+- Validate the relationship between entities
+- Check if all relevant constraints are captured
+
+### 2. Semantic Consistency Check
+For the entire graph:
+- Verify all quads together preserve the original claim's meaning
+- Check for logical gaps or inconsistencies
+- Validate temporal/causal order is maintained
+- Ensure entity coreferences are consistent
+
+## 7. Example 
+(... more in-context examples here ...)
+
+Now, please parse the following claim into the formal representation described above:
+Claim = [[Claim]]
+
+Output =
+
+\end{lstlisting}
+\begin{lstlisting}[caption=Evidence Graph Construction Prompt, label={lst:evidence_graph}]
+## Task:  
+Extract semantic triples from the given evidence and ensure every extracted triple is context-independent.  
+
+## Input:  
+- Evidence: [Full text of the evidence]  
+- Entities: [List of entities mentioned, including entity name and its type]  
+
+## Output Format:  
+Extract triples separated by newlines, with each triple in the format:  
+`Subject | Predicate | Object`  
+
+## Extraction Guidelines:  
+1. Ensure that either **Predicate** and **Object**, or both in each triple are from the provided Entity Set. 
+2. "Identify all relationships" from the Evidence Text that meet this requirement.  
+3. Every triple should be context-independent. Use full forms or expanded phrases for relational references where necessary. 
+
+## Examples
+(... more in-context examples here ...)
+
+## Real data
+Evidence: [[Evidence]]
+
+Entity Set: 
+[[Entity Set]]
+
+Output:
+
+\end{lstlisting}
+\begin{lstlisting}[caption=Graph Match Prompt, label={lst:graph_match_prompt}]
+Evidence:
+[[Evidence]]  
+
+Using the provided evidence, determine whether the given quadruple is true or false.  
+Quadruple:
+[[Quadruple]]  
+
+Output(true/false): 
+\end{lstlisting}
+\begin{lstlisting}[caption=Graph Completion Prompt, label={lst:graph_completion_prompt}]
+Evidence:
+[[Evidence]]
+
+Complete the fuzzy entity in the quadruple based on above evidence. If a suitable entity is found, output its name; otherwise, output "none".
+
+Quadruples:
+[[Quadruples]]
+
+Output:
+\end{lstlisting}
+
+
+
+\end{document}

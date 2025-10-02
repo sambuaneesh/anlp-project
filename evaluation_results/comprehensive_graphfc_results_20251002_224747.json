@@ -1,0 +1,78 @@
+{
+  "single_hop": {
+    "accuracy": 0.0,
+    "precision": 0.0,
+    "recall": 0.0,
+    "f1": 0.0,
+    "support_f1": 0,
+    "refute_f1": 0,
+    "nei_f1": 0,
+    "avg_confidence": 0.7503519371466904,
+    "class_distribution": {
+      "REFUTES": 1
+    },
+    "runtime": 0.07419367075934098,
+    "sample_count": 1,
+    "avg_runtime": 0.07419367075934098
+  },
+  "multi_hop_2": {
+    "accuracy": 0.5161290322580645,
+    "precision": 0.42948717948717946,
+    "recall": 0.35233918128654973,
+    "f1": 0.38021505376344084,
+    "support_f1": 0.5806451612903226,
+    "refute_f1": 0.5599999999999999,
+    "nei_f1": 0,
+    "avg_confidence": 0.48186676930293315,
+    "class_distribution": {
+      "REFUTES": 12,
+      "SUPPORTS": 19
+    },
+    "runtime": 3.661723616377189,
+    "sample_count": 31,
+    "avg_runtime": 0.11812011665732867
+  },
+  "multi_hop_3plus": {
+    "accuracy": 0.3727022058823529,
+    "precision": 0.35831228866155884,
+    "recall": 0.24823967806528616,
+    "f1": 0.285816917903682,
+    "support_f1": 0.36802205375603037,
+    "refute_f1": 0.48942869995501576,
+    "nei_f1": 0,
+    "avg_confidence": 0.32904385771186595,
+    "class_distribution": {
+      "REFUTES": 1457,
+      "SUPPORTS": 719
+    },
+    "runtime": 370.3119933250876,
+    "sample_count": 2176,
+    "avg_runtime": 0.17018014399130865
+  },
+  "complete": {
+    "accuracy": 0.3745471014492754,
+    "precision": 0.3594282717020718,
+    "recall": 0.24960455727006248,
+    "f1": 0.2874883964022997,
+    "support_f1": 0.3724696356275304,
+    "refute_f1": 0.4899955535793687,
+    "nei_f1": 0,
+    "avg_confidence": 0.33138027906094114,
+    "class_distribution": {
+      "REFUTES": 1470,
+      "SUPPORTS": 738
+    },
+    "runtime": 374.047910612224,
+    "sample_count": 2208,
+    "avg_runtime": 0.16940575661785506
+  },
+  "hop_distribution": {
+    "3": 2176,
+    "2": 31,
+    "1": 1
+  },
+  "total_samples": 2208,
+  "total_runtime": 374.04791061222403,
+  "accuracy_degradation_1_to_2": -0.5161290322580645,
+  "accuracy_degradation_2_to_3plus": 0.14342682637571158
+}

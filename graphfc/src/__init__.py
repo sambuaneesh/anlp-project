@@ -1,0 +1,1 @@
+# GraphFC: A Graph-based Verification Framework for Fact-Checking
